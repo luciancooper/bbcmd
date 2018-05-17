@@ -1,35 +1,26 @@
+
 import arrpy
-import pandas as pd
-import numpy as np
 from .core import GameSim,GameSimError
-import bbstat
-import bbsrc
+#from .stats import RosterStatSim,SeasonStatSim
 
 ###########################################################################################################
 #                                          GameStatSim                                                    #
 ###########################################################################################################
+"""
+frameIndex(years)
 
+_gameinfo
+
+"""
 class GameStatSim(GameSim):
-
-    def __init__(self,**kwargs):
-        super().__init__(**kwargs)
-        self.frame = None
-        self._data = None
-
-    #------------------------------- (Sim)[frame] -------------------------------#
-    _framecol = ['R','UR','TUR','PA','AB','S','D','T','HR','BB','IBB','HBP','K','I','SH',
+    data_cols = ['R','UR','TUR','PA','AB','S','D','T','HR','BB','IBB','HBP','K','I','SH',
                  'SF','RBI','GDP','SB','CS','PO','WP','PB','BK','P','A','E']
-    _frametype = int
-
-    @staticmethod
-    def _frameIndex(years):
-        return arrpy.SetIndex([a for b in [i for j in [[[(g,0),(g,1)] for g in bbsrc.games(y)] for y in years] for i in j] for a in b],name=['gid','team'])
-
+    def __init__(self,frame,**kwargs):
+        super().__init__(**kwargs)
+        self.frame = frame
+        self._data = None
+    
     #------------------------------- (Sim)[Back-End] -------------------------------#
-
-    def _simYears(self,years):
-        self.frame = bbstat.StatFrame(self._frameinx(years),self._framecol,dtype=self._frametype)
-        return super()._simYears(years)
 
     def _gameinfo(self,gameid,*info):
         self._data = self.frame.ix[gameid]
@@ -43,8 +34,6 @@ class GameStatSim(GameSim):
 
     def _stat(self,t,stat,inc=1):
         self._data[t,stat]+=inc
-        #self._data[t][self._col[stat]]+=inc
-        #self._data[t,self._col[stat]]+=inc
 
     #------------------------------- [stats] -------------------------------#
 
@@ -114,27 +103,18 @@ class GameStatSim(GameSim):
 ###########################################################################################################
 #                                            ScoreSim                                                     #
 ###########################################################################################################
+"""
+frameIndex(years)
+"""
 
 class ScoreSim(GameSim):
+    data_cols = ['a','h']
 
-    def __init__(self,**kwargs):
+    def __init__(self,frame,**kwargs):
         super().__init__(**kwargs)
-        self.frame = None
-        #self.lib=arrpy.mapset(itype=str,dtype=(int,int))
-
-    #------------------------------- (Sim)[frame] -------------------------------#
-    _framecol = ['a','h']
-    _frametype = int
-
-    @staticmethod
-    def _frameIndex(years):
-        return arrpy.SetIndex([a for b in [bbsrc.games(y) for y in years] for a in b],name='gid')
+        self.frame = frame
 
     #------------------------------- (Sim)[Back-End] -------------------------------#
-
-    def _simYears(self,years):
-        self.frame = bbstat.StatFrame(self._frameinx(years),self._framecol,dtype=self._frametype)
-        return super()._simYears(years)
 
     def _clear(self):
         self.frame[self.gameid,'a'] = self.score[0]

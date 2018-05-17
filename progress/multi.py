@@ -15,8 +15,8 @@ class MultiBar():
     out = stderr
     ma_window = 10 # Simple Moving Average window
     width = 32
-    suffix = '{0.percent: 2.0f}% [{0.inx}/{0.max}]'
-    bar_padding = ' |%s| '
+    suffix = '{0.percent: 2.0f}% ({0.inx}/{0.max}) [{0.avg:.2f}|{0.eta_td}] '
+    bar_padding = '|%s|'
     phases = (' ', '▏', '▎', '▍', '▌', '▋', '▊', '▉', '█')
     flavors = {
         'pixel':('⡀', '⡄', '⡆', '⡇', '⣇', '⣧', '⣷', '⣿'),

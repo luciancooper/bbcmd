@@ -4,8 +4,8 @@
 import pyutil
 from pyutil.core import zipmap
 import arrpy
-import bbsrc
-import bbstat
+#import bbsrc
+from .frame import StatFrame
 
 # NOSIMLIST --> 20070926SEACLE1
 
@@ -107,6 +107,7 @@ class GameSim():
         self.lib=None
 
     #------------------------------- (Sim)[frame] -------------------------------#
+    data_type = int
 
     def setFrame(self,frame):
         self.frame=frame
@@ -116,24 +117,13 @@ class GameSim():
         return self.frame.to_dataframe()
 
     def initFrame(self,years):
-        return bbstat.StatFrame(self._frameIndex(years),self._framecol,dtype=self._frametype)
+        return StatFrame(self._frameIndex(years),self._framecol,dtype=self._frametype)
 
     @staticmethod
     def _frameIndex(years):
         raise GameSimError('No Frame Index Generator Implemented')
 
 
-    #------------------------------- (Sim)[Back-End] -------------------------------#
-
-    def _simYears(self,years):
-        for y in years:
-            with bbsrc.SeasonData(y) as gd:
-                self._simGamedata(gd)
-        return self
-
-    def _simGamedata(self,gd):
-        for g in (gd.iterprog() if self.report else gd):
-            self._simGame(g,gd.gamectx())
 
     #------------------------------- [sim](Year) -------------------------------#
 

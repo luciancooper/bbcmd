@@ -1,14 +1,14 @@
 
 import xml.etree.ElementTree as etree
 
-class bblib():
+class seasonlib():
     def __init__(self,xmlfile):
         tree = etree.parse(xmlfile)
         root = tree.getroot()
-        self.seasons = [bbseason(node) for node in root]
+        self.seasons = [seasondata(node) for node in root]
 
     def __len__(self):
-        return len(self.seaons)
+        return len(self.seasons)
 
     def __iter__(self):
         for s in self.seasons:
@@ -40,7 +40,7 @@ class bblib():
         return [a for b in [i for j in [[[(g,0),(g,1)] for g in s.gid] for s in self.seasons] for i in j] for a in b]
 
 
-class bbseason():
+class seasondata():
     def __init__(self,node):
         self.year = int(node.attrib['year'])
         self.paths = {
@@ -57,7 +57,7 @@ class bbseason():
 
 
     def __str__(self):
-        return '[bbseason %i]'%self.year
+        return '[seasondata %i]'%self.year
     def __len__(self):
         return sum(self.g)
 

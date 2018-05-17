@@ -7,6 +7,7 @@ sys.path.append('/Users/luciancooper/projects/pymodule')
 import os
 import time
 import progress
+import pandas as pd
 
 def main():
     print('\n'+'\n'.join(sys.path)+'\n',file=sys.stdout)
@@ -92,6 +93,9 @@ def anci_exp():
     time.sleep(2)
 
 if __name__=='__main__':
+    #df = pd.DataFrame([[0,1],[2,3]],index=['A','B'],columns=['X','Y'])
+    #df.to_csv(sys.stdout,index=True)
+    #print(df)
     multi_bar()
     #main()
     #loadbar()

@@ -1,12 +1,31 @@
 #!/usr/bin/env python
 
-from .appearance import AppearanceSim,LahmanAppearanceSim
-from .team import GameStatSim,ScoreSim
-from .league import LeagueStatSim
-from .defout import FposOutSim
-from .roster import PIDStatSim,PPIDStatSim
-from .runexp import REMSim
-from .woba import wOBAWeightSim
+"""
+GameStatSim
+return arrpy.SetIndex([a for b in [i for j in [[[(g,0),(g,1)] for g in bbsrc.games(y)] for y in years] for i in j] for a in b],name=['gid','team'])
+
+ScoreSim
+return arrpy.SetIndex([a for b in [bbsrc.games(y) for y in years] for a in b],name='gid')
+
+SeasonStatSim
+return arrpy.SetIndex([*years],name='year')
+
+
+RosterStatSim
+return arrpy.SetIndex([a for b in [bbsrc.pid(y) for y in years] for a in b],name=['year','team','pid'])
+
+PPIDStatSim
+return arrpy.SetIndex([a for b in [bbsrc.ppid(y) for y in years] for a in b],name=['year','team','pid'])
+
+
+"""
+#from .appearance import AppearanceSim,LahmanAppearanceSim
+#from .team import GameStatSim,ScoreSim
+#from .league import LeagueStatSim
+#from .defout import FposOutSim
+#from .roster import PIDStatSim,PPIDStatSim
+#from .runexp import REMSim
+#from .woba import wOBAWeightSim
 
 #__all__ = ['GameStatSim']
 
