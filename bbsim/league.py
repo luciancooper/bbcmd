@@ -1,9 +1,9 @@
 
 import arrpy
 import pandas as pd
-import bbstat
 from pyutil.core import zipmap
 from .core import GameSim,RosterSim,GameSimError
+from .frame import REM
 
 ###########################################################################################################
 #                                         SeasonStatSim                                                   #
@@ -15,9 +15,9 @@ initYear(year)
 """
 class SeasonStatSim(GameSim):
 
-    def __init__(self,**kwargs):
+    def __init__(self,frame,**kwargs):
         super().__init__(**kwargs)
-        self.frame = None
+        self.frame = frame
         self._data = None
 
     #------------------------------- [sim](Year) -------------------------------#
@@ -76,8 +76,8 @@ class LeagueStatSim(SeasonStatSim):
 class REMSim(SeasonStatSim):
     data_cols = [*range(24)]
     data_type = arrpy.count
-    def __init__(self,paonly=False,**kwargs):
-        super().__init__(**kwargs)
+    def __init__(self,frame,paonly=False,**kwargs):
+        super().__init__(frame,**kwargs)
         self.states = [[0,0] for x in range(24)]
         self.paonly = paonly
 
@@ -127,14 +127,14 @@ class wOBAWeightSim(SeasonStatSim):
     data_cols = ['O','E','SH','SF','K','BB','IBB','HBP','I','S','D','T','HR']
     data_type = arrpy.count
     #statcode = [0,1,2,3,4,5,6,7,8,9,10] # BB(3)HBP(5)S(7)D(8)T(9)HR(10)
-    def __init__(self,rem_data,**kwargs):
-        super().__init__(**kwargs)
+    def __init__(self,rem_data,frame,**kwargs):
+        super().__init__(frame,**kwargs)
         self.rem_data = rem_data
 
     #------------------------------- [sim](Year) -------------------------------#
 
     def initYear(self,year):
-        self.rem = bbstat.REM(list(self.rem_data.ix[year]))
+        self.rem = REM(list(self.rem_data.ix[year]))
         return super().initYear(year)
 
     #------------------------------- [df] -------------------------------#

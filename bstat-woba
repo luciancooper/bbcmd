@@ -1,0 +1,51 @@
+#!/usr/bin/env python
+
+import sys
+sys.path.append('/Users/luciancooper/projects/pymodule')
+import arrpy
+import numpy as np
+import pandas as pd
+from progress import MultiBar
+from bbsim.data import seasonlib
+from bbsim.frame import StatFrame
+from bbsim.league import REMSim,wOBAWeightSim,LeagueStatSim
+
+LW_STAT = ['BB','HBP','S','D','T','HR']
+
+def run_sim(data,sim,message=None):
+    if message:
+        print(message,file=sys.stderr)
+    prog = MultiBar(2,len(data))
+    for gd in data:
+        sim.initYear(gd.year)
+        with gd:
+            for g in prog.iter(gd,'(%i)'%gd.year):
+                sim._simGame(g,gd.gamectx())
+
+def calc_OBP(df):
+    # OBP = (S+D+T+HR+BB+HBP)/(AB+BB+HBP+SF)
+    n = df[['S','D','T','HR','BB','HBP']].sum(axis=1)
+    d = df[['AB','BB','HBP','SF']].sum(axis=1)
+    return (n/d).replace([np.inf, -np.inf], np.nan).rename('OBP')
+
+if __name__=='__main__':
+    data = seasonlib('bbdata.xml')
+    index = arrpy.SetIndex(data.years,name='year')
+    frame_rem = StatFrame(index,REMSim.data_cols,dtype=REMSim.data_type)
+    frame_oba = StatFrame(index,wOBAWeightSim.data_cols,dtype=wOBAWeightSim.data_type)
+    frame_mlb = StatFrame(index,LeagueStatSim.data_cols,dtype=LeagueStatSim.data_type)
+    sim_rem = REMSim(frame_rem)
+    sim_woba = wOBAWeightSim(frame_rem,frame_oba)
+    sim_mlb = LeagueStatSim(frame_mlb)
+    run_sim(data,sim_rem,message='Simulating REM')
+    run_sim(data,sim_woba,message='Simulating wOBA')
+    run_sim(data,sim_mlb,message='Simulating MLB')
+    df_oba = frame_oba.to_dataframe()
+    df_mlb = frame_mlb.to_dataframe()
+    lw = pd.concat([sum([df_oba[x] for x in ['O','E','K']]).rename('O'),df_oba[['BB','IBB','HBP','I','S','D','T','HR']]],axis=1).applymap(float)
+    adj_lw = pd.concat([(lw[x]-lw['O']).rename(x) for x in LW_STAT],axis=1)
+    OBP = calc_OBP(df_mlb)
+    wOBA = ((df_mlb[LW_STAT]*adj_lw[LW_STAT]).sum(axis=1)/df_mlb[['AB','BB','SF','HBP']].sum(axis=1)).rename('wOBA')
+    wOBAScale = (OBP/wOBA).rename('wOBAScale')
+    wOBA_lw = adj_lw.mul(wOBAScale,axis=0)
+    pd.concat([OBP,wOBA,wOBAScale,wOBA_lw],axis=1).to_csv(sys.stdout,index=True)
