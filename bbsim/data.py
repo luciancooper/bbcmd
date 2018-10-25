@@ -1,5 +1,6 @@
 
 import xml.etree.ElementTree as etree
+import progress
 
 class seasonlib():
     def __init__(self,xmlfile):
@@ -38,6 +39,15 @@ class seasonlib():
     @property
     def gid_team(self):
         return [a for b in [i for j in [[[(g,0),(g,1)] for g in s.gid] for s in self.seasons] for i in j] for a in b]
+
+
+    def run(self,sim):
+        bars = progress.MultiBar(2,len(self))
+        for gd in self:
+            sim.initYear(gd.year)
+            with gd:
+                for g in bars.iter(gd,'(%i)'%gd.year):
+                    sim._simGame(g,gd.gamectx())
 
 
 class seasondata():
@@ -139,7 +149,7 @@ class seasondata():
         while i!='F':
             if i=='E': self.cfb.readline()
             i = self.fb.readline()[0]
-
+    
     def gamectx(self):
         for i in range(self.n[self.i-1]):
             yield self.cfb.readline()[:-1].split(',')

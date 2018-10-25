@@ -3,25 +3,28 @@
 import sys
 sys.path.append('/Users/luciancooper/projects/pymodule')
 import arrpy
+import numpy as np
+import pandas as pd
 
 from bbsim.data import seasonlib
 from bbsim.frame import StatFrame
-from bbsim.games import ScoreSim
+from bbsim.league import LeagueStatSim
 
 
 def main():
-    print('Simulating Game Scores',file=sys.stderr)
     data = seasonlib('bbdata.xml')
-    index = arrpy.SetIndex(data.gid,name='gid')
-    frame = StatFrame(index,ScoreSim.data_cols,dtype=ScoreSim.data_type)
-    sim = ScoreSim(frame)
+    index = arrpy.SetIndex(data.years,name='year')
+    frame = StatFrame(index,LeagueStatSim.data_cols,dtype=LeagueStatSim.data_type)
+    sim = LeagueStatSim(frame)
+    print('Simulating MLB',file=sys.stderr)
     data.run(sim)
     df = frame.to_dataframe()
     if not sys.stdout.isatty():
         df.to_csv(sys.stdout,index=True)
         return
-    
+    print(repr(df))
 
 
 if __name__=='__main__':
+    print('Simulating MLB Stats',file=sys.stderr)
     main()

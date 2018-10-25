@@ -5,22 +5,12 @@ sys.path.append('/Users/luciancooper/projects/pymodule')
 import arrpy
 import numpy as np
 import pandas as pd
-from progress import MultiBar
+
 from bbsim.data import seasonlib
 from bbsim.frame import StatFrame
 from bbsim.league import REMSim,wOBAWeightSim,LeagueStatSim
 
 LW_STAT = ['BB','HBP','S','D','T','HR']
-
-def run_sim(data,sim,message=None):
-    if message:
-        print(message,file=sys.stderr)
-    prog = MultiBar(2,len(data))
-    for gd in data:
-        sim.initYear(gd.year)
-        with gd:
-            for g in prog.iter(gd,'(%i)'%gd.year):
-                sim._simGame(g,gd.gamectx())
 
 def calc_OBP(df):
     # OBP = (S+D+T+HR+BB+HBP)/(AB+BB+HBP+SF)
@@ -37,9 +27,14 @@ if __name__=='__main__':
     sim_rem = REMSim(frame_rem)
     sim_woba = wOBAWeightSim(frame_rem,frame_oba)
     sim_mlb = LeagueStatSim(frame_mlb)
-    run_sim(data,sim_rem,message='Simulating REM')
-    run_sim(data,sim_woba,message='Simulating wOBA')
-    run_sim(data,sim_mlb,message='Simulating MLB')
+
+    print('Simulating REM',file=sys.stderr)
+    data.run(sim_rem)
+    print('Simulating wOBA',file=sys.stderr)
+    data.run(sim_woba)
+    print('Simulating MLB',file=sys.stderr)
+    data.run(sim_mlb)
+
     df_oba = frame_oba.to_dataframe()
     df_mlb = frame_mlb.to_dataframe()
     lw = pd.concat([sum([df_oba[x] for x in ['O','E','K']]).rename('O'),df_oba[['BB','IBB','HBP','I','S','D','T','HR']]],axis=1).applymap(float)

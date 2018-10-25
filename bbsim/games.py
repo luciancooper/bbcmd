@@ -19,7 +19,7 @@ class GameStatSim(GameSim):
         super().__init__(**kwargs)
         self.frame = frame
         self._data = None
-    
+
     #------------------------------- (Sim)[Back-End] -------------------------------#
 
     def _gameinfo(self,gameid,*info):
