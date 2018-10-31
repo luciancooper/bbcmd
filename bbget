@@ -4,6 +4,12 @@ import sys
 import progress
 import requests
 import time
+import sys
+sys.path.append('/Users/luciancooper/projects/pymodule')
+import arrpy
+
+from bbsim.data import seasonlib
+
 
 CHUNKSIZE = 1024
 
@@ -16,7 +22,7 @@ def downloadFile(url,tofile):
             f.write(data)
 
 
-def downloadYearData(year,todir):
+#def downloadYearData(year,todir):
 
 
 def single_bar():
@@ -32,9 +38,12 @@ def multi_bar():
 
 def main():
     print('bbget',file=sys.stderr)
+    data = seasonlib('bbdata.xml')
+    print(f"pids:{len(data[2015].pid)}")
+    print(f"gids:{len(data[2015].gid)}")
+    #index = arrpy.SetIndex(data.pid,name=['year','team','pid'])
+    #print(f"index:{len(index)}")
 
-    single_bar()
-    multi_bar()
 
 if __name__=='__main__':
     main()
