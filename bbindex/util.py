@@ -76,7 +76,7 @@ def binaryUpper(a,v,l=0,r=None):
         else:
             l = m+1
     return l
-    
+
 #if (isinstance(other,TypedList)):
 
 # fn(acummulator,current)
@@ -88,7 +88,7 @@ def mapReduce(fn):
             yield nx
     return wrapper
 
-def mapPairs(fn):
+def mapper_pairs(fn):
     def wrapper(arg):
         if not hasattr(arg,"__next__"):
             arg = iter(arg)
@@ -97,3 +97,12 @@ def mapPairs(fn):
             yield fn(i,j)
             i = j
     return wrapper
+
+
+def mapPairs(a,fn):
+    if not hasattr(a,"__next__"):
+        a = iter(a)
+    i = next(a)
+    for j in a:
+        yield fn(i,j)
+        i = j
