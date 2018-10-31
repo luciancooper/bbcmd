@@ -2,7 +2,7 @@
 from .util import *
 
 class BBIndexSlice():
-    __slots__ = ['j','i','i0','i1','pointer']
+    __slots__ = ['j','i','pointer']
 
 
     @property
@@ -10,9 +10,9 @@ class BBIndexSlice():
         return self.pointer.n - self.j
 
     def __len__(self):
-        if self.n == 1:
+        if self.j == len(self.pointer.i):
             return self.i1 - self.i0
-        return self.pointer.i[self.j][self.i1-1] - (self.pointer.i[self.j][self.i0-1] if self.i0 > 0 else 0)
+        return self.pointer.i[self.j][self.i1] - self.pointer.i[self.j][self.i0]
 
     @property
     def shape(self):
@@ -20,16 +20,24 @@ class BBIndexSlice():
 
 
     @property
+    def i0(self):
+        return self.i[0]
+
+    @property
+    def i1(self):
+        return self.i[1]
+
+    @property
     def startIndex(self):
         if len(self.pointer.i) == self.j:
             return self.i0
-        return self.pointer.i[self.j][self.i0-1] if self.i0 > 0 else 0
+        return self.pointer.i[self.j][self.i0]
 
     @property
     def endIndex(self):
         if len(self.pointer.i) == self.j:
             return self.i1
-        return self.pointer.i[self.j][self.i1-1]
+        return self.pointer.i[self.j][self.i1]
 
     @property
     def indexSlice(self):
@@ -39,7 +47,7 @@ class BBIndexSlice():
 
 
     def __del__(self):
-        self.j,self.i,self.i0,self.i1,self.pointer = None,None,None,None,None
+        self.j,self.i,self.pointer = None,None,None
 
     #------------------------------- (dtype)[none] ---------------------------------------------------------------#
 
@@ -94,38 +102,38 @@ class BBIndexSlice():
 
 
     def value(self,index):
-        return (*(self.v[j][binaryUpper(self.i[j],index)] for j in range(self.n-1)),)+(self.v[-1][index],)
+        return (*(self.pointer.v[j][binaryLower(self.pointer.i[j],index)] for j in range(self.j,len(self.pointer.i))),)+(self.v[-1][index],)
+        #return (*(self.v[j][binaryUpper(self.i[j],index)] for j in range(self.n-1)),)+(self.v[-1][index],)
         #return (self.v[j][binaryLower(self.i[j],index)] for j in range(self.n-1),)+(self.v[index],)
 
+
     def index(self,value):
-        j0,j1,n = self.i0,self.i1,len(self.pointer.i)
-
+        i0,i1,n = self.i0,self.i1,len(self.pointer.i)
         for (j,v) in zip(range(self.j,n),value):
-            x = binaryIndex(self.pointer.v[j],v,j0,j1)
-            if x < 0: raise BBIndexError(f"[{v}] not found in index ({j})")
+            i = binaryIndex(self.pointer.v[j],v,i0,i1)
+            if i < 0: raise BBIndexError(f"[{v}] not found in index ({j})")
             if j+1 == n:
-                j0 = self.pointer.i[j][x-1] if x > 0 else 0
-                j1 = self.pointer.i[j][x]
+                j0,j1 = self.pointer.i[j][i],self.pointer.i[j][i+1]
             else:
-                j0 = binaryIndex(self.pointer.i[j+1],self.pointer.i[j][x-1]) if x > 0 else 0
-                j1 = binaryIndex(self.pointer.i[j+1],self.pointer.i[i][x])+1
-
+                j0 = binaryLower(self.pointer.i[j+1],self.pointer.i[j][x])
+                j1 = binaryUpper(self.pointer.i[j+1],self.pointer.i[j][x+1])
         return binaryIndex(self.pointer.v[-1],value[-1],j0,j1)
 
-
     def _subIndex(self,value):
-        j0,j1,n = self.i0,self.i1,len(self.pointer.i)
+        i0,i1,n = self.i0,self.i1,len(self.pointer.i)
         for (j,v) in zip(range(self.j,n),value):
-            x = binaryIndex(self.pointer.v[j],v,j0,j1)
-            if x < 0: raise BBIndexError(f"[{v}] not found in index ({j})")
+            i = binaryIndex(self.pointer.v[j],v,i0,i1)
+            if i < 0: raise BBIndexError(f"[{v}] not found in index ({j})")
             if j+1 == n:
-                j0 = self.pointer.i[i][x-1] if x > 0 else 0
-                j1 = self.pointer.i[i][x]
+                i0 = self.pointer.i[j][i]
+                i1 = self.pointer.i[j][i+1]
             else:
-                j0 = binaryIndex(self.pointer.i[i+1],self.pointer.i[i][x-1]) if x > 0 else 0
-                j1 = binaryIndex(self.pointer.i[i+1],self.pointer.i[i][x])+1
+                i0 = binaryLower(self.pointer.i[j+1],self.pointer.i[j][i])
+                i1 = binaryUpper(self.pointer.i[j+1],self.pointer.i[j][i+1])
 
-        # Return Slice
+        return self.pointer._new_slice(j,i0,i1)
+
+
 
     def __getitem__(self,x):
         if type(x)==slice:
@@ -139,13 +147,16 @@ class BBIndexSlice():
 
         i = binaryIndex(self.pointer.v[self.j],x,self.i0,self.i1)
         if i < 0: raise IndexError(f"[{x}] not found in first layer")
+
         if len(self.pointer.i)-self.j==1:
-            j1 = self.pointer.i[self.j][i]
-            j0 = self.pointer.i[self.j][i-1] if i > 0 else 0
+            i0 = self.pointer.i[self.j][i]
+            i1 = self.pointer.i[self.j][i+1]
         else:
-            j0 = binaryIndex(self.pointer.i[self.j+1],self.pointer.i[self.j][i-1]) if i > 0 else 0
-            j1 = binaryIndex(self.pointer.i[self.j+1],self.pointer.i[self.j][i])+1
-        return self.pointer._new_slice(self.j+1,i,j0,j1)
+            i0 = binaryLower(self.pointer.i[self.j+1],self.pointer.i[self.j][i])
+            i1 = binaryUpper(self.pointer.i[self.j+1],self.pointer.i[self.j][i+1])
+        return self.pointer._new_slice(self.j+1,i0,i1)
+
+
 
 
 
@@ -192,36 +203,23 @@ class BBIndexSlice():
             return [i for j in [[a.format(x)]+[a.format('')]*(y-1) for (x,y) in zip(s,n)] for i in j]
         return [a.format(x) for x in s]
 
+
+
     def _toStr(self,maxrows=16,showall=False):
-        #print(f"toStr -> showall:{showall}")
+
         m = len(self)
+
         if showall: maxrows = m
+
         inx = (self.startIndex,self.endIndex)
-        iInx = [(self.i0,self.i1)]+[self.pointer._iRange(j,*inx) for j in range(self.j+1,len(self.pointer.i))]
+        print(f"{self.__class__.__name__}.toStr -> m:{m} ({inx[0]},{inx[1]})")
+        iInx = [(self.i0,self.i1)]+[(binaryLower(self.pointer.i[j],inx[0]),binaryUpper(self.pointer.i[j],inx[1])) for j in range(self.j+1,len(self.pointer.i))]
+
         print("inx ({}:{})".format(*inx))
         print("iInx %s"%"  ".join("({})[{}:{}]".format(j,*x) for (j,x) in zip(range(self.j,30),iInx)))
-        print(f"branches:{self.pointer.i}")
-        if m <= maxrows:
 
-            n = [[*mapPairs(([0]+c)[i[0]:i[1]],lambda x,y: y-x)] for (i,c) in zip(iInx,self.pointer.i[self.j:])]
-
-            #mapPairs(([0]+self.pointer.i[self.j])[i0-1:i1],lambda x,y: y-x)
-            #[for i in ]
-            #n = [([i[0]]+[(i[x]-i[x-1]) for x in range(1,len(i))]) for i in self.i]
-
-            d = [self._sCol(v[i[0]:i[1]],n) for (i,v,n) in zip(iInx,self.v[self.j:-1],n)] + [self._sCol(self.pointer.v[-1][inx[0]:inx[1]])]
-            d = ['[ %s ]'%' | '.join(x) for x in zip(*d)]
-            return "\n".join(d)
-
-        d = []
-        for (z,v,i) in zip(iInx,self.v[self.j:-1],self.i[self.j:]):
-            i = i[z[0]:z[1]]
-            v = v[z[0]:z[1]]
-            i0,i1 = binaryUpper(i,maxrows//2-1),binaryLower(i,m-maxrows//2)
-            n0 = [i[0]]+[i[x]-i[x-1] for x in range(1,i0)]+[i[i0]-i[i0-1]-i[i0]%(maxrows//2)] if i0>0 else [i[i0]-i[i0]%(maxrows//2)]
-            n1 = [i[i1+1]-(m-maxrows//2)] + [i[x]-i[x-1] for x in range(i1+2,len(i))]
-            d += [self._sCol(v[:i0+1]+v[i1+1:],n0+n1)]
-
-        d += [self._sCol(self.v[-1][:(maxrows//2)]+self.v[-1][-(maxrows//2):])]
-        s = ['[ %s ]'%' | '.join(x) for x in zip(*d)]
-        return '\n'.join(s[:maxrows//2]+[('{:^%i}'%max(len(x) for x in s)).format("...")]+s[-maxrows//2:])
+        #if m <= maxrows:
+        d = [self._sCol(v[i[0]:i[1]],mapPairs(c[i[0]:i[1]+1],lambda a,b:b-a)) for (i,c,v) in zip(iInx,self.pointer.i[self.j:],self.pointer.v[self.j:])]
+        d = d + [self._sCol(self.pointer.v[-1][inx[0]:inx[1]])]
+        d = ['[ %s ]'%' | '.join(x) for x in zip(*d)]
+        return "\n".join(d)

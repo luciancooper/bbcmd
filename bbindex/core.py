@@ -70,10 +70,14 @@ class BBIndex():
         m = max(len(x) for x in data)
         self._sortData(0,[*range(m)],data)
 
-    @staticmethod
-    @mapReduce
-    def _offset_spans(current,cumulative):
-        return cumulative+current,cumulative+current
+
+    def _extendIndexBranch(self,j,spans):
+        if len(self.i[j]) == 0:
+            self.i[j].append(0)
+        spans[0]+= self.i[j][-1]
+        for i in range(1,len(spans)):
+            spans[i]+=spans[i-1]
+        self.i[j].extend(spans)
 
     def _sortData(self,j,inx,data):
         i = self._SORT_LVL([[x] for x in inx],data[j])
@@ -81,15 +85,16 @@ class BBIndex():
         if (len(data)-j) == 1:
             #self.i[j].extend([len(a) for a in i])
             return
+        self._extendIndexBranch(j,[len(x) for x in i])
 
-        self.i[j].extend([*self._offset_spans([len(x) for x in i],0 if len(self.i[j])==0 else self.i[j][-1])])
         for x in i:
             if len(x) > 1:
                 self._sortData(j+1,x,data)
                 continue
             for l in range(j+1,len(data)-1):
                 print(f"l:{l}")
-                self.i[l].append((0 if len(self.i[l]) == 0 else self.i[l][-1])+1)
+                self._extendIndexBranch(l,[1])
+                #self.i[l].append((0 if len(self.i[l]) == 0 else self.i[l][-1])+1)
                 self.v[l].append(data[l][x[0]])
             self.v[-1].append(data[-1][x[0]])
 
@@ -137,27 +142,22 @@ class BBIndex():
     #------------------------------- (iter) ---------------------------------------------------------------#
 
     def __iter__(self):
-        #inx,val = [0]*len(self.i),[x[0] for x in self.v]
         inx = [0]*len(self.i)
         for (i,x) in enumerate(self.v[-1]):
-
             yield (*(v[j] for (v,j) in zip(self.v[:-1],inx)),)+(x,)
-            #yield tuple(val+[x])
             for (j,c) in enumerate(self.i):
-                if c[inx[j]] == i+1:
+                if c[inx[j]+1] == i+1:
                     inx[j]+=1
-                #if inx[j] < len(c)-1 and c[inx[j]+1] == i+1:
-                #    inx[j]+=1
 
     def __reversed__(self):
-        inx = [len(x)-1 for x in self.i]
+        inx = [len(v)-1 for x in self.v]
         for (i,x) in zip(range(len(self.v[-1])-1,-1,-1),reversed(self.v[-1])):
             yield (*(v[j] for (v,j) in zip(self.v[:-1],inx)),)+(x,)
+            #for j in (j for (j,c) in enumerate(self.i) if c[inx[j]] == i):
+            #    inx[j]-=1
             for (j,c) in enumerate(self.i):
-                if inx[j] > 0 and  c[inx[j]-1] == i:
+                if c[inx[j]] == i:
                     inx[j]-=1
-                #if c[inx[j]] == i:
-                #    inx[j]-=1
 
 
     #------------------------------- (relations) ---------------------------------------------------------------#
@@ -175,16 +175,27 @@ class BBIndex():
     def _spans(x0,x1):
         return x1-x0
 
-    def column(self,j):
-        if j == self.n-1:
-            return self.v[j].tolist()
+    def itemSpans(self,j):
+        if j == len(self.i):
+            for x in range(len(self)):
+                yield 1
+            return
+        prev = self.i[j][0]
+        for next in self.i[j][1:]:
+            yield next-prev
+            prev = next
+        #for i in range(1,len(self.i[j])):
+        #    yield self.i[j][i]-self.i[j][i-1]
 
-        return [self.v[j][0]]*self.i[j][0] + [a for b in [[v]*n for (n,v) in zip(self._spans(self.i[j]),self.v[j][1:])] for a in b]
-        #return [a for b in [[v]*n for (n,v) in zip(self._spans(self.i[j]),self.v[j])] for a in b] + [self.v[j][-1]]*(len(self.v[-1])-self.i[j][-1])
+
+    def column(self,j):
+        if j == len(self.i):
+            return self.v[j].tolist()
+        return [a for b in [[v]*n for (n,v) in zip(mapPairs(self.i[j],lambda a,b : b-a),self.v[j])] for a in b]
 
 
     def value(self,index):
-        return (*(self.v[j][binaryUpper(self.i[j],index)] for j in range(self.n-1)),)+(self.v[-1][index],)
+        return (*(self.v[j][binaryLower(self.i[j],index)] for j in range(self.n-1)),)+(self.v[-1][index],)
         #return (self.v[j][binaryLower(self.i[j],index)] for j in range(self.n-1),)+(self.v[index],)
 
     def _iIndex(self,j,inx):
@@ -202,20 +213,19 @@ class BBIndex():
 
     def index(self,value):
         i0,i1 = 0,len(self)
-        j0,j1 = -1,len(self.v[0])
+        j0,j1 = 0,len(self.v[0])
 
         for (i,v) in zip(range(len(self.i)),value):
-            x = binaryIndex(self.v[i],v,j0+1,j1)
-
+            x = binaryIndex(self.v[i],v,j0,j1)
             #print(f"j:[{j0}:{j1}] i:[{i0}:{i1}] <{v}> -> col:[{','.join(self.v[i])}] -> x:[{x}]")
             if x < 0: raise BBIndexError(f"[{v}] not found in index ({i})")
 
-            i0 = self.i[i][x-1] if x > 0 else 0
-            i1 = self.i[i][x]
+            i0 = self.i[i][x]
+            i1 = self.i[i][x+1]
             print(f"[{v}] x:{x} j:[{j0}:{j1}]  i:[{i0}:{i1}] -> {self.i[i]}  -> v:{self.v[i]}")
             if i+1 < len(self.i):
-                j0 = binaryIndex(self.i[i+1],i0) if i0 > 0 else 0
-                j1 = binaryIndex(self.i[i+1],i1)+1
+                j0 = binaryLower(self.i[i+1],i0)
+                j1 = binaryLower(self.i[i+1],i1)
             else:
                 j0,j1 = i0,i1
         #print(f"j:[{j0}:{j1}] <{value[-1]}> col:[{','.join(self.v[-1])}]")
@@ -223,20 +233,24 @@ class BBIndex():
 
 
     def _subIndex(self,value):
+        i0,i1 = 0,len(self.v[0])
+        for (j,v) in enumerate(value):
+            i = binaryIndex(self.v[j],v,i0,i1)
 
-        #i0,i1 = 0,len(self)
-        j0,j1 = 0,len(self.v[0])
-        for (i,v) in enumerate(value):
-            x = binaryIndex(self.v[i],v,j0,j1)
-            if x < 0: raise BBIndexError(f"[{v}] not found in index ({i})")
-            if i+1 == len(self.i):
-                j0 = self.i[i][x-1] if x > 0 else 0
-                j1 = self.i[i][x]
+            if i < 0: raise BBIndexError(f"[{v}] not found in index ({j})")
+            print(f"i [{self.i[j][i]}:{self.i[j][i+1]}]")
+            if j+1 == len(self.i):
+                i0 = self.i[j][i]
+                i1 = self.i[j][i+1]
             else:
-                j0 = binaryIndex(self.i[i+1],self.i[i][x-1]) if x > 0 else 0
-                j1 = binaryIndex(self.i[i+1],self.i[i][x])
+                i0 = binaryLower(self.i[j+1],self.i[j][i])
+                i1 = binaryLower(self.i[j+1],self.i[j][i+1])
 
-        return self._new_slice(i,x,j0,j1)
+                #print(f"i:[{self.i[j+1][i0]} : {self.i[j+1][i1]}]")
+            print(f"[{v}] i:{i} i01:[{i0}:{i1}]  i:[{','.join(str(z) for z in self.i[j])}]  -> v:[{','.join(str(z) for z in self.v[j])}]")
+        #print(f"\tSliced j:{j+1} [{i0}:{i1}] i:[{self.i[j+1][i0]}:{self.i[j+1][i1]}]\n")
+        print(f"Sliced j:{j+1} [{i0}:{i1}]")
+        return self._new_slice(j+1,i0,i1)
 
 
     def __getitem__(self,x):
@@ -252,21 +266,19 @@ class BBIndex():
         i = binaryIndex(self.v[0],x)
         if i < 0: raise IndexError(f"[{x}] not found in first layer")
         if len(self.i)==1:
-            j1 = self.i[0][i]
-            j0 = self.i[0][i-1] if i > 0 else 0
+            i0 = self.i[0][i]
+            i1 = self.i[0][i+1]
         else:
-            j0 = binaryIndex(self.i[1],self.i[0][i-1]) if i > 0 else 0
-            j1 = binaryIndex(self.i[1],self.i[0][i])+1
-        return self._new_slice(1,i,j0,j1)
+            i0 = binaryLower(self.i[1],self.i[0][i])
+            i1 = binaryUpper(self.i[1],self.i[0][i+1])
+        return self._new_slice(1,i0,i1)
 
 
-    def _new_slice(self,j,i,i0,i1):
+    def _new_slice(self,j,i0,i1):
         inst = object.__new__(BBIndexSlice)
-        inst.j = j
-        inst.i = i
-        inst.i0 = i0
-        inst.i1 = i1
         inst.pointer = self
+        inst.j = j
+        inst.i = (i0,i1)
         return inst
 
     #------------------------------- (convert) ---------------------------------------------------------------#
@@ -315,21 +327,31 @@ class BBIndex():
         m = len(self)
         if showall: maxrows = m
         if m <= maxrows:
-            n = [([i[0]]+[(i[x]-i[x-1]) for x in range(1,len(i))]) for i in self.i]
+            #n = [([i[0]]+[(i[x]-i[x-1]) for x in range(1,len(i))]) for i in self.i]
+            ix = self._sCol([*range(m)])
+            n = [mapPairs(i,lambda a,b : b-a) for i in self.i]
             d = [self._sCol(v,n) for (v,n) in zip(self.v,n)] + [self._sCol(self.v[-1])]
             d = ['[ %s ]'%' | '.join(x) for x in zip(*d)]
-            return "\n".join(d)
+            return '\n'.join('('+x+')'+y for x,y in zip(ix,d))
 
         d = []
         for (v,i) in zip(self.v,self.i):
-            i0,i1 = binaryUpper(i,maxrows//2-1),binaryLower(i,m-maxrows//2)
-            n0 = [i[0]]+[i[x]-i[x-1] for x in range(1,i0)]+[i[i0]-i[i0-1]-i[i0]%(maxrows//2)] if i0>0 else [i[i0]-i[i0]%(maxrows//2)]
-            n1 = [i[i1+1]-(m-maxrows//2)] + [i[x]-i[x-1] for x in range(i1+2,len(i))]
-            d += [self._sCol(v[:i0+1]+v[i1+1:],n0+n1)]
+            i0,i1 = binaryLower(i,maxrows//2-1),binaryUpper(i,m-maxrows//2)
 
-        d += [self._sCol(self.v[-1][:(maxrows//2)]+self.v[-1][-(maxrows//2):])]
+            n0 = [*mapPairs(i[:i0+1].tolist()+[i[i0+1]-i[i0+1]%(maxrows//2)],lambda a,b : b-a)]
+            n1 = [*mapPairs([i[i1-1]+(m-i[i1-1])%(maxrows//2)]+i[i1:].tolist(),lambda a,b : b-a)]
+            print(f"v0 {v[:i0+1]} n0 {n0}\nv1 {v[i1-1:]}  n1 {n1} \n v0+v1 {v[:i0+1]+v[i1-1:]} n0+n1 {n0+n1}")
+            d += [self._sCol(v[:i0+1]+v[i1-1:],n0+n1)]
+
+
+            #n0 = [i[0]]+[i[x]-i[x-1] for x in range(1,i0)]+[i[i0]-i[i0-1]-i[i0]%(maxrows//2)] if i0>0 else [i[i0]-i[i0]%(maxrows//2)]
+            #n1 = [i[i1+1]-(m-maxrows//2)] + [i[x]-i[x-1] for x in range(i1+2,len(i))]
+            #d += [self._sCol(v[:i0+1]+v[i1+1:],n0+n1)]
+
+        d += [self._sCol(self.v[-1][:(maxrows//2)]+self.v[-1][-maxrows//2:])]
         s = ['[ %s ]'%' | '.join(x) for x in zip(*d)]
-        return '\n'.join(s[:maxrows//2]+[('{:^%i}'%max(len(x) for x in s)).format("...")]+s[-maxrows//2:])
+        #return "\n".join(s)
+        return '\n'.join(s[:maxrows//2]+[('{:^%i}'%max(len(x) for x in s)).format("...")]+s[-(maxrows//2):])
 
 
     #------------------------------- (str) ---------------------------------------------------------------#
