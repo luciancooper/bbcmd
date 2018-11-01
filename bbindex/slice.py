@@ -188,38 +188,36 @@ class BBIndexSlice():
     #------------------------------- (str) ---------------------------------------------------------------#
 
     def __str__(self):
-        return self._toStr(showall=True)
-
-    def __repr__(self):
         return self._toStr()
 
-
-    @staticmethod
-    def _sCol(v,n=None):
-        s = [str(x) for x in v]
-        a = '{:<%i}'%max(len(x) for x in s)
-        if n != None:
-            #n = [i[0]]+[i[x]-i[x-1] for x in range(1:len(i))]
-            return [i for j in [[a.format(x)]+[a.format('')]*(y-1) for (x,y) in zip(s,n)] for i in j]
-        return [a.format(x) for x in s]
+    def __repr__(self):
+        return self._toStr(showall=True)
 
 
-
-    def _toStr(self,maxrows=16,showall=False):
-
+    def _toStr(self,maxrows=12,showall=False):
         m = len(self)
-
         if showall: maxrows = m
-
         inx = (self.startIndex,self.endIndex)
-        print(f"{self.__class__.__name__}.toStr -> m:{m} ({inx[0]},{inx[1]})")
+        #print(f"{self.__class__.__name__}.toStr -> m:{m} ({inx[0]},{inx[1]})")
+
         iInx = [(self.i0,self.i1)]+[(binaryLower(self.pointer.i[j],inx[0]),binaryUpper(self.pointer.i[j],inx[1])) for j in range(self.j+1,len(self.pointer.i))]
+        #print("inx ({}:{})".format(*inx))
+        #print("iInx %s"%"  ".join("({})[{}:{}]".format(j,*x) for (j,x) in zip(range(self.j,30),iInx)))
+        if m <= maxrows:
+            ix = strCol(['(%d)'%x for x in range(m)],align='>')
+            d = [strCol(v[i[0]:i[1]],mapPairs(c[i[0]:i[1]+1],lambda a,b:b-a)) for (i,c,v) in zip(iInx,self.pointer.i[self.j:],self.pointer.v[self.j:])]
+            d = d + [strCol(self.pointer.v[-1][inx[0]:inx[1]])]
+            d = ['[ %s ]'%' | '.join(x) for x in zip(*d)]
+            return '\n'.join(x+' '+y for x,y in zip(ix,d))
 
-        print("inx ({}:{})".format(*inx))
-        print("iInx %s"%"  ".join("({})[{}:{}]".format(j,*x) for (j,x) in zip(range(self.j,30),iInx)))
+        d = []
+        for (i,v,c) in zip(iInx,self.pointer.v[self.j:],self.pointer.i[self.j:]):
+            i0 = binaryLower(c,c[i[0]]+maxrows-1,i[0],i[1])
+            n = [*mapPairs(c[i[0]:i0+1].tolist()+[c[i0+1]-c[i0+1]%maxrows],lambda a,b : b-a)]
+            d += [strCol(v[i[0]:i0+1]+v[i[1]-1:i[1]],n+[1])]
 
-        #if m <= maxrows:
-        d = [self._sCol(v[i[0]:i[1]],mapPairs(c[i[0]:i[1]+1],lambda a,b:b-a)) for (i,c,v) in zip(iInx,self.pointer.i[self.j:],self.pointer.v[self.j:])]
-        d = d + [self._sCol(self.pointer.v[-1][inx[0]:inx[1]])]
+        d += [strCol(self.pointer.v[-1][inx[0]:inx[0]+maxrows]+self.pointer.v[-1][inx[1]-1:inx[1]])]
         d = ['[ %s ]'%' | '.join(x) for x in zip(*d)]
-        return "\n".join(d)
+        ix = strCol(['(%d)'%x for x in [*range(inx[0],inx[0]+maxrows)]+[inx[1]-1]],align='>')
+        s = [x+' '+y for x,y in zip(ix,d)]
+        return '\n'.join(s[:-1]+[('{:^%i}'%max(len(x) for x in s)).format("...")]+s[-1:])

@@ -30,7 +30,6 @@ class BBIndex():
     def n(self):
         return len(self.dtype)
 
-
     def __len__(self):
         return len(self.v[-1])
 
@@ -43,6 +42,7 @@ class BBIndex():
         return len(self)==0
 
     #------------------------------- (instance) ---------------------------------------------------------------#
+
     @staticmethod
     def _new_inst(c,i,v,dtype,**kwargs):
         inst = object.__new__(c)
@@ -315,43 +315,40 @@ class BBIndex():
 
 
     @staticmethod
-    def _sCol(v,n=None):
+    def _sCol(v,n=None,align="<"):
         s = [str(x) for x in v]
-        a = '{:<%i}'%max(len(x) for x in s)
+        a = '{:%s%i}'%(align,max(len(x) for x in s))
         if n != None:
             #n = [i[0]]+[i[x]-i[x-1] for x in range(1:len(i))]
             return [i for j in [[a.format(x)]+[a.format('')]*(y-1) for (x,y) in zip(s,n)] for i in j]
         return [a.format(x) for x in s]
+
+
 
     def _toStr(self,maxrows=16,showall=False):
         m = len(self)
         if showall: maxrows = m
         if m <= maxrows:
             #n = [([i[0]]+[(i[x]-i[x-1]) for x in range(1,len(i))]) for i in self.i]
-            ix = self._sCol([*range(m)])
+            ix = strCol(['(%d)'%x for x in range(m)],align='>')
             n = [mapPairs(i,lambda a,b : b-a) for i in self.i]
-            d = [self._sCol(v,n) for (v,n) in zip(self.v,n)] + [self._sCol(self.v[-1])]
+            d = [strCol(v,n) for (v,n) in zip(self.v,n)] + [strCol(self.v[-1])]
             d = ['[ %s ]'%' | '.join(x) for x in zip(*d)]
-            return '\n'.join('('+x+')'+y for x,y in zip(ix,d))
-
+            return '\n'.join(x+' '+y for x,y in zip(ix,d))
         d = []
         for (v,i) in zip(self.v,self.i):
-            i0,i1 = binaryLower(i,maxrows//2-1),binaryUpper(i,m-maxrows//2)
+            i0 = binaryLower(i,maxrows-1)
+            n = [*mapPairs(i[:i0+1].tolist()+[i[i0+1]-i[i0+1]%maxrows],lambda a,b : b-a)]
+            d += [strCol(v[:i0+1]+v[-1:],n+[1])]
 
-            n0 = [*mapPairs(i[:i0+1].tolist()+[i[i0+1]-i[i0+1]%(maxrows//2)],lambda a,b : b-a)]
-            n1 = [*mapPairs([i[i1-1]+(m-i[i1-1])%(maxrows//2)]+i[i1:].tolist(),lambda a,b : b-a)]
-            print(f"v0 {v[:i0+1]} n0 {n0}\nv1 {v[i1-1:]}  n1 {n1} \n v0+v1 {v[:i0+1]+v[i1-1:]} n0+n1 {n0+n1}")
-            d += [self._sCol(v[:i0+1]+v[i1-1:],n0+n1)]
+        d += [strCol(self.v[-1][:maxrows]+self.v[-1][-1:])]
+        d = ['[ %s ]'%' | '.join(x) for x in zip(*d)]
+        ix = strCol(['(%d)'%x for x in [*range(maxrows)]+[len(self.v[-1])-1]],align='>')
+        s = [x+' '+y for x,y in zip(ix,d)]
 
-
-            #n0 = [i[0]]+[i[x]-i[x-1] for x in range(1,i0)]+[i[i0]-i[i0-1]-i[i0]%(maxrows//2)] if i0>0 else [i[i0]-i[i0]%(maxrows//2)]
-            #n1 = [i[i1+1]-(m-maxrows//2)] + [i[x]-i[x-1] for x in range(i1+2,len(i))]
-            #d += [self._sCol(v[:i0+1]+v[i1+1:],n0+n1)]
-
-        d += [self._sCol(self.v[-1][:(maxrows//2)]+self.v[-1][-maxrows//2:])]
-        s = ['[ %s ]'%' | '.join(x) for x in zip(*d)]
+        #print("\n","\n".join(s),"\n")
         #return "\n".join(s)
-        return '\n'.join(s[:maxrows//2]+[('{:^%i}'%max(len(x) for x in s)).format("...")]+s[-(maxrows//2):])
+        return '\n'.join(s[:-1]+[('{:^%i}'%max(len(x) for x in s)).format("...")]+s[-1:])
 
 
     #------------------------------- (str) ---------------------------------------------------------------#

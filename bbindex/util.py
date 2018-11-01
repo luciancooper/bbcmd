@@ -106,3 +106,12 @@ def mapPairs(a,fn):
     for j in a:
         yield fn(i,j)
         i = j
+
+
+
+def strCol(v,n=None,align="<"):
+    s = [str(x) for x in v]
+    a = '{:%s%i}'%(align,max(len(x) for x in s))
+    if n != None:
+        return [i for j in [[a.format(x)]+[a.format('')]*(y-1) for (x,y) in zip(s,n)] for i in j]
+    return [a.format(x) for x in s]
