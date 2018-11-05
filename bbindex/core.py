@@ -43,28 +43,25 @@ class BBIndex():
 
     #------------------------------- (instance) ---------------------------------------------------------------#
 
-    @staticmethod
-    def _new_inst(c,i,v,dtype,**kwargs):
-        inst = object.__new__(c)
-        inst.i = i
-        inst.v = v
-        inst.dtype = dtype
-        for k,v in kwargs.items():
-            inst.__setattr__(k,v)
-        return inst
+    def __init__(self,dtype,data=None,ids=None):
+        self.dtype = tuple(dtype)
+        lvl,val = self._SORT(data)
+        self.i = [np.array(x,dtype=np.uint16) for x in lvl]
+        self.v = [np.array(v,dtype=np.dtype(dt)) for (v,dt) in zip(val,dtype)]
+
+        #n = len(self.dtype)
+        #self.i = [array('H') for x in range(n-1)]
+        #self.v = [array(x) for x in self.dtype]
+        #if data != None: self._loadData(data)
+
 
     def __del__(self):
         self.i,self.v,self.dtype = None,None,None
 
     #------------------------------- (dtype)[none] ---------------------------------------------------------------#
 
-    def __init__(self,dtype,data=None,ids=None):
-        self.dtype = tuple(dtype)
-        n = len(self.dtype)
-        self.i = [array('H') for x in range(n-1)]
-        self.v = [array(x) for x in self.dtype]
-        if data != None:
-            self._loadData(data)
+
+
 
     def _loadData(self,data):
         m = max(len(x) for x in data)
@@ -130,6 +127,39 @@ class BBIndex():
         return [*cls._MERGE_LVL(l,r,data)]
 
 
+    @classmethod
+    def _SORT(cls,data):
+        m = max(len(x) for x in data)
+        lvl = [[0] for x in range(len(data)-1)]
+        val = [[] for x in range(len(data))]
+
+        def extend(i,x):
+            x[0]+=i[-1]
+            for j in range(1,len(x)):
+                x[j]+=x[j-1]
+            return i+x
+
+        def sort(i,inx):
+            nonlocal lvl,val
+            j = cls._SORT_LVL([[x] for x in inx],data[i])
+            val[i] += [data[i][a[0]] for a in j]
+            if (len(data)-i) == 1:
+                return
+            lvl[i] = extend(lvl[i],[len(a) for a in j])
+            for x in j:
+                if len(x) > 1:
+                    sort(i+1,x)
+                    continue
+                for l in range(i+1,len(lvl)):
+                    lvl[l] = extend(lvl[l],[1])
+                    val[l] += [data[l][x[0]]]
+                val[-1] += [data[-1][x[0]]]
+
+        sort(0,[*range(m)])
+        return lvl,val
+
+
+
 
     #------------------------------- (wip/clear) ---------------------------------------------------------------#
 
@@ -153,8 +183,6 @@ class BBIndex():
         inx = [len(v)-1 for x in self.v]
         for (i,x) in zip(range(len(self.v[-1])-1,-1,-1),reversed(self.v[-1])):
             yield (*(v[j] for (v,j) in zip(self.v[:-1],inx)),)+(x,)
-            #for j in (j for (j,c) in enumerate(self.i) if c[inx[j]] == i):
-            #    inx[j]-=1
             for (j,c) in enumerate(self.i):
                 if c[inx[j]] == i:
                     inx[j]-=1
@@ -190,8 +218,9 @@ class BBIndex():
 
     def column(self,j):
         if j == len(self.i):
-            return self.v[j].tolist()
-        return [a for b in [[v]*n for (n,v) in zip(mapPairs(self.i[j],lambda a,b : b-a),self.v[j])] for a in b]
+            return self.v[j]
+        dt = np.dtype(self.dtype[j])
+        return np.array([a for b in [[v]*n for (n,v) in zip(mapPairs(self.i[j],lambda a,b : b-a),self.v[j])] for a in b],dtype=dt)
 
 
     def value(self,index):
@@ -236,20 +265,20 @@ class BBIndex():
         i0,i1 = 0,len(self.v[0])
         for (j,v) in enumerate(value):
             i = binaryIndex(self.v[j],v,i0,i1)
-
+            #print(f"i:{i} v[j]:{self.v[j]}")
             if i < 0: raise BBIndexError(f"[{v}] not found in index ({j})")
-            print(f"i [{self.i[j][i]}:{self.i[j][i+1]}]")
+            #print(f"i [{self.i[j][i]}:{self.i[j][i+1]}]")
             if j+1 == len(self.i):
                 i0 = self.i[j][i]
                 i1 = self.i[j][i+1]
             else:
+                #print(f"!i:{self.i[j+1]}")
                 i0 = binaryLower(self.i[j+1],self.i[j][i])
                 i1 = binaryLower(self.i[j+1],self.i[j][i+1])
-
                 #print(f"i:[{self.i[j+1][i0]} : {self.i[j+1][i1]}]")
-            print(f"[{v}] i:{i} i01:[{i0}:{i1}]  i:[{','.join(str(z) for z in self.i[j])}]  -> v:[{','.join(str(z) for z in self.v[j])}]")
+            #print(f"[{v}] i:{i} i01:[{i0}:{i1}]  i:[{','.join(str(z) for z in self.i[j])}]  -> v:[{','.join(str(z) for z in self.v[j])}]")
         #print(f"\tSliced j:{j+1} [{i0}:{i1}] i:[{self.i[j+1][i0]}:{self.i[j+1][i1]}]\n")
-        print(f"Sliced j:{j+1} [{i0}:{i1}]")
+        #print(f"Sliced j:{j+1} [{i0}:{i1}]")
         return self._new_slice(j+1,i0,i1)
 
 
@@ -313,18 +342,6 @@ class BBIndex():
     def __repr__(self):
         return self._toStr(showall=True)
 
-
-    @staticmethod
-    def _sCol(v,n=None,align="<"):
-        s = [str(x) for x in v]
-        a = '{:%s%i}'%(align,max(len(x) for x in s))
-        if n != None:
-            #n = [i[0]]+[i[x]-i[x-1] for x in range(1:len(i))]
-            return [i for j in [[a.format(x)]+[a.format('')]*(y-1) for (x,y) in zip(s,n)] for i in j]
-        return [a.format(x) for x in s]
-
-
-
     def _toStr(self,maxrows=16,showall=False):
         m = len(self)
         if showall: maxrows = m
@@ -338,16 +355,14 @@ class BBIndex():
         d = []
         for (v,i) in zip(self.v,self.i):
             i0 = binaryLower(i,maxrows-1)
-            n = [*mapPairs(i[:i0+1].tolist()+[i[i0+1]-i[i0+1]%maxrows],lambda a,b : b-a)]
-            d += [strCol(v[:i0+1]+v[-1:],n+[1])]
+            n = [*mapPairs(list(i[:i0+1])+[maxrows-i[i0]],lambda a,b : b-a)]+[1]
+            #print(f'n:{n}')
+            d += [strCol(list(v[:i0+1])+list(v[-1:]),n)]
 
-        d += [strCol(self.v[-1][:maxrows]+self.v[-1][-1:])]
+        d += [strCol(list(self.v[-1][:maxrows])+list(self.v[-1][-1:]))]
         d = ['[ %s ]'%' | '.join(x) for x in zip(*d)]
         ix = strCol(['(%d)'%x for x in [*range(maxrows)]+[len(self.v[-1])-1]],align='>')
         s = [x+' '+y for x,y in zip(ix,d)]
-
-        #print("\n","\n".join(s),"\n")
-        #return "\n".join(s)
         return '\n'.join(s[:-1]+[('{:^%i}'%max(len(x) for x in s)).format("...")]+s[-1:])
 
 

@@ -1,5 +1,6 @@
 
 from .util import *
+import numpy as np
 
 class BBIndexSlice():
     __slots__ = ['j','i','pointer']
@@ -49,46 +50,33 @@ class BBIndexSlice():
     def __del__(self):
         self.j,self.i,self.pointer = None,None,None
 
-    #------------------------------- (dtype)[none] ---------------------------------------------------------------#
-
-
-
     #------------------------------- (iter) ---------------------------------------------------------------#
 
     def __iter__(self):
-        #inx,val = [0]*len(self.i),[x[0] for x in self.v]
-
-        if n == 1:
+        if self.n == 1:
             for x in self.pointer.v[-1][self.i0:self.i1]:
                 yield x
             return
-
         start,end = self.startIndex,self.endIndex
-        inx = [self.i0]+[self.pointer._iIndex(j,start) for j in range(self.j+1,len(self.pointer.i))]
+        inx = [self.i0]+[binaryIndex(self.pointer.i[j],start) for j in range(self.j+1,len(self.pointer.i))]
         for (i,x) in zip(range(start,end),self.pointer.v[-1][start:end]):
             yield (*(v[j] for (v,j) in zip(self.pointer.v[self.j:-1],inx)),)+(x,)
-            for (j,c) in enumerate(self.i[self.j:]):
+            for (j,c) in enumerate(self.pointer.i[self.j:]):
                 if c[inx[j]] == i+1:
                     inx[j]+=1
 
     def __reversed__(self):
-        if n == 1:
-            for x in self.pointer.v[-1][self.i0-1:self.i1-1:-1]:
+        if self.n == 1:
+            for x in self.pointer.v[-1][self.i1-1:self.i0-1:-1]:
                 yield x
             return
-
         start,end = self.startIndex,self.endIndex
-        #inx = [self.i0]+[self.pointer._iIndex(j,start) for j in range(self.j+1,len(self.pointer.i))]
-
-        inx = [len(x)-1 for x in self.i]
-        for (i,x) in zip(range(len(self.v[-1])-1,-1,-1),reversed(self.v[-1])):
-            yield (*(v[j] for (v,j) in zip(self.v[:-1],inx)),)+(x,)
-            for (j,c) in enumerate(self.i):
-                if inx[j] > 0 and  c[inx[j]-1] == i:
+        inx = [self.i1-1]+[binaryIndex(self.pointer.i[j],end)-1 for j in range(self.j+1,len(self.pointer.i))]
+        for (i,x) in zip(range(end-1,start-1,-1),self.pointer.v[-1][end-1:start-1:-1]):
+            yield (*(v[j] for (v,j) in zip(self.pointer.v[self.j:-1],inx)),)+(x,)
+            for (j,c) in enumerate(self.pointer.i[self.j:]):
+                if c[inx[j]] == i:
                     inx[j]-=1
-                #if c[inx[j]] == i:
-                #    inx[j]-=1
-
 
     #------------------------------- (relations) ---------------------------------------------------------------#
 
@@ -100,6 +88,13 @@ class BBIndexSlice():
 
     #------------------------------- (columns) ---------------------------------------------------------------#
 
+    def column(self,j):
+        if self.j+j == len(self.pointer.i):
+            return self.pointer.v[-1][self.startIndex:self.endIndex]
+
+        dt = np.dtype(self.pointer.dtype[self.j+j])
+        i0,i1 = binaryLower(self.pointer.i[self.j+j],self.startIndex),binaryUpper(self.pointer.i[self.j+j],self.endIndex)
+        return np.array([a for b in [[v]*n for (n,v) in zip(mapPairs(self.pointer.i[self.j+j][i0:i1+1],lambda a,b : b-a),self.pointer.v[self.j+j][i0:i1])] for a in b],dtype=dt)
 
     def value(self,index):
         return (*(self.pointer.v[j][binaryLower(self.pointer.i[j],index)] for j in range(self.j,len(self.pointer.i))),)+(self.v[-1][index],)
@@ -178,13 +173,6 @@ class BBIndexSlice():
         print(f'wrote file [{file}]')
 
 
-
-
-
-
-
-    #------------------------------- (convert) ---------------------------------------------------------------#
-
     #------------------------------- (str) ---------------------------------------------------------------#
 
     def __str__(self):
@@ -194,17 +182,13 @@ class BBIndexSlice():
         return self._toStr(showall=True)
 
 
-    def _toStr(self,maxrows=12,showall=False):
+    def _toStr(self,maxrows=16,showall=False):
         m = len(self)
         if showall: maxrows = m
         inx = (self.startIndex,self.endIndex)
-        #print(f"{self.__class__.__name__}.toStr -> m:{m} ({inx[0]},{inx[1]})")
-
         iInx = [(self.i0,self.i1)]+[(binaryLower(self.pointer.i[j],inx[0]),binaryUpper(self.pointer.i[j],inx[1])) for j in range(self.j+1,len(self.pointer.i))]
-        #print("inx ({}:{})".format(*inx))
-        #print("iInx %s"%"  ".join("({})[{}:{}]".format(j,*x) for (j,x) in zip(range(self.j,30),iInx)))
         if m <= maxrows:
-            ix = strCol(['(%d)'%x for x in range(m)],align='>')
+            ix = strCol(['(%d)'%x for x in range(inx[0],inx[1])],align='>')
             d = [strCol(v[i[0]:i[1]],mapPairs(c[i[0]:i[1]+1],lambda a,b:b-a)) for (i,c,v) in zip(iInx,self.pointer.i[self.j:],self.pointer.v[self.j:])]
             d = d + [strCol(self.pointer.v[-1][inx[0]:inx[1]])]
             d = ['[ %s ]'%' | '.join(x) for x in zip(*d)]
@@ -213,10 +197,10 @@ class BBIndexSlice():
         d = []
         for (i,v,c) in zip(iInx,self.pointer.v[self.j:],self.pointer.i[self.j:]):
             i0 = binaryLower(c,c[i[0]]+maxrows-1,i[0],i[1])
-            n = [*mapPairs(c[i[0]:i0+1].tolist()+[c[i0+1]-c[i0+1]%maxrows],lambda a,b : b-a)]
-            d += [strCol(v[i[0]:i0+1]+v[i[1]-1:i[1]],n+[1])]
+            n = [*mapPairs(list(c[i[0]:i0+1])+[maxrows+c[i[0]]],lambda a,b : b-a)]+[1]
+            d += [strCol(list(v[i[0]:i0+1])+list(v[i[1]-1:i[1]]),n)]
 
-        d += [strCol(self.pointer.v[-1][inx[0]:inx[0]+maxrows]+self.pointer.v[-1][inx[1]-1:inx[1]])]
+        d += [strCol(list(self.pointer.v[-1][inx[0]:inx[0]+maxrows])+list(self.pointer.v[-1][inx[1]-1:inx[1]]))]
         d = ['[ %s ]'%' | '.join(x) for x in zip(*d)]
         ix = strCol(['(%d)'%x for x in [*range(inx[0],inx[0]+maxrows)]+[inx[1]-1]],align='>')
         s = [x+' '+y for x,y in zip(ix,d)]

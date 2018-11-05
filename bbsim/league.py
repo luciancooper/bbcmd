@@ -13,6 +13,7 @@ frameIndex(years)
 
 initYear(year)
 """
+
 class SeasonStatSim(GameSim):
 
     def __init__(self,frame,**kwargs):

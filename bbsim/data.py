@@ -51,6 +51,7 @@ class seasonlib():
 
 
 class seasondata():
+    
     def __init__(self,node):
         self.year = int(node.attrib['year'])
         self.paths = {
@@ -149,7 +150,7 @@ class seasondata():
         while i!='F':
             if i=='E': self.cfb.readline()
             i = self.fb.readline()[0]
-    
+
     def gamectx(self):
         for i in range(self.n[self.i-1]):
             yield self.cfb.readline()[:-1].split(',')
