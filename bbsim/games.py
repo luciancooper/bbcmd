@@ -13,27 +13,26 @@ _gameinfo
 
 """
 class GameStatSim(GameSim):
-    data_cols = ['R','UR','TUR','PA','AB','S','D','T','HR','BB','IBB','HBP','K','I','SH',
-                 'SF','RBI','GDP','SB','CS','PO','WP','PB','BK','P','A','E']
-    def __init__(self,frame,**kwargs):
+    dcols = ['R','UR','TUR','PA','AB','S','D','T','HR','BB','IBB','HBP','K','I','SH','SF','RBI','GDP','SB','CS','PO','WP','PB','BK','P','A','E']
+    def __init__(self,matrix,**kwargs):
         super().__init__(**kwargs)
-        self.frame = frame
-        self._data = None
+        self.matrix = matrix
+        self.ginx = None
 
     #------------------------------- (Sim)[Back-End] -------------------------------#
 
     def _gameinfo(self,gameid,*info):
-        self._data = self.frame.ix[gameid]
+        self.ginx = self.matrix.inx[gameid]
         super()._gameinfo(gameid,*info)
 
     def _clear(self):
-        self._data = None
+        self.ginx = None
         super()._clear()
 
     #------------------------------- [stat] -------------------------------#
 
     def _stat(self,t,stat,inc=1):
-        self._data[t,stat]+=inc
+        self.matrix[self.ginx[t],stat]+=inc
 
     #------------------------------- [stats] -------------------------------#
 
@@ -108,15 +107,16 @@ frameIndex(years)
 """
 
 class ScoreSim(GameSim):
-    data_cols = ['a','h']
+    dcols = ['a','h']
 
-    def __init__(self,frame,**kwargs):
+    def __init__(self,matrix,**kwargs):
         super().__init__(**kwargs)
-        self.frame = frame
+        self.matrix = matrix
 
     #------------------------------- (Sim)[Back-End] -------------------------------#
 
     def _clear(self):
-        self.frame[self.gameid,'a'] = self.score[0]
-        self.frame[self.gameid,'h'] = self.score[1]
+        i = self.matrix.inx[self.gameid]
+        self.matrix[i,0] = self.score[0]
+        self.matrix[i,1] = self.score[1]
         super()._clear()

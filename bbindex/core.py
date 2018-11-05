@@ -2,7 +2,6 @@
 import numpy as np
 import pandas as pd
 
-
 from array import array
 from .util import * #isiterable,BBIndexError,BBIndexCreationError,BBIndexTODOError,BBIndexTypeError
 from .slice import BBIndexSlice
@@ -43,11 +42,14 @@ class BBIndex():
 
     #------------------------------- (instance) ---------------------------------------------------------------#
 
-    def __init__(self,dtype,data=None,ids=None):
+    def __init__(self,dtype,data,ids=None):
         self.dtype = tuple(dtype)
         lvl,val = self._SORT(data)
         self.i = [np.array(x,dtype=np.uint16) for x in lvl]
         self.v = [np.array(v,dtype=np.dtype(dt)) for (v,dt) in zip(val,dtype)]
+        if ids != None:
+            self.ids = ids
+
 
         #n = len(self.dtype)
         #self.i = [array('H') for x in range(n-1)]
@@ -227,59 +229,64 @@ class BBIndex():
         return (*(self.v[j][binaryLower(self.i[j],index)] for j in range(self.n-1)),)+(self.v[-1][index],)
         #return (self.v[j][binaryLower(self.i[j],index)] for j in range(self.n-1),)+(self.v[index],)
 
-    def _iIndex(self,j,inx):
-        """ Write Something """
-        if inx == 0:
-            return 0
-        return binaryIndex(self.i[j],inx)
+    def binarySpanIndex(self,j,v,i0,i1):
+        if j+1 == len(self.i):
+            for i in range(i0,i1):
+                x = binaryIndex(self.v[j+1],v,self.i[j][i],self.i[j][i+1])
+                if x != None:
+                    return x
+            return None
 
-    def _iRange(self,j,i0,i1):
-        r = binaryIndex(self.i[j],i1)+1
-        if i0 == 0:
-            return (0,r)
-        l = binaryIndex(self.i[j],i0)
-        return (l,r)
+        x0 = binaryLower(self.i[j+1],self.i[j][i0])
+        for i in range(i0+1,i1+1):
+            x1 = binaryLower(self.i[j+1],self.i[j][i])
+            x = binaryIndex(self.v[j+1],v,x0,x1)
+            if x != None:
+                return x
+            x0 = x1
+        return None
+
 
     def index(self,value):
-        i0,i1 = 0,len(self)
-        j0,j1 = 0,len(self.v[0])
-
-        for (i,v) in zip(range(len(self.i)),value):
-            x = binaryIndex(self.v[i],v,j0,j1)
-            #print(f"j:[{j0}:{j1}] i:[{i0}:{i1}] <{v}> -> col:[{','.join(self.v[i])}] -> x:[{x}]")
-            if x < 0: raise BBIndexError(f"[{v}] not found in index ({i})")
-
-            i0 = self.i[i][x]
-            i1 = self.i[i][x+1]
-            print(f"[{v}] x:{x} j:[{j0}:{j1}]  i:[{i0}:{i1}] -> {self.i[i]}  -> v:{self.v[i]}")
-            if i+1 < len(self.i):
-                j0 = binaryLower(self.i[i+1],i0)
-                j1 = binaryLower(self.i[i+1],i1)
+        j,i0,i1 = 0,0,len(self.v[0])
+        while j < len(self.i):
+            if value[j]=='*':
+                if j == len(self.i) or j+1 == len(value):
+                    raise BBIndexError(f"[{value[j]}] invalid placement")
+                i = self.binarySpanIndex(j,value[j+1],i0,i1)
+                if i==None: raise BBIndexError(f"[{value[j+1]}] not found in column ({j+1})")
+                j+=1
             else:
-                j0,j1 = i0,i1
-        #print(f"j:[{j0}:{j1}] <{value[-1]}> col:[{','.join(self.v[-1])}]")
-        return binaryIndex(self.v[-1],value[-1],j0,j1)
+                i = binaryIndex(self.v[j],value[j],i0,i1)
+                if i == None: raise BBIndexError(f"[{value[j]}] not found in col ({j})")
+            i0,i1 = self.i[j][i],self.i[j][i+1]
+            if j+1 < len(self.i):
+                i0,i1 = binaryLower(self.i[j+1],i0),binaryLower(self.i[j+1],i1)
+            j+=1
+
+        return binaryIndex(self.v[j],value[j],i0,i1)
 
 
-    def _subIndex(self,value):
-        i0,i1 = 0,len(self.v[0])
-        for (j,v) in enumerate(value):
-            i = binaryIndex(self.v[j],v,i0,i1)
-            #print(f"i:{i} v[j]:{self.v[j]}")
-            if i < 0: raise BBIndexError(f"[{v}] not found in index ({j})")
-            #print(f"i [{self.i[j][i]}:{self.i[j][i+1]}]")
-            if j+1 == len(self.i):
-                i0 = self.i[j][i]
-                i1 = self.i[j][i+1]
+    def slice(self,value):
+        i0,i1,j = 0,len(self.v[0]),0
+        while j < len(value):
+            if value[j]=='*':
+                if j == len(self.i) or j+1 == len(value):
+                    raise BBIndexError(f"[{value[j]}] invalid placement")
+                i = self.binarySpanIndex(j,value[j+1],i0,i1)
+                #print(f'i:{i}')
+                if i==None: raise BBIndexError(f"[{value[j+1]}] not found in column ({j+1})")
+                j+=1
             else:
-                #print(f"!i:{self.i[j+1]}")
-                i0 = binaryLower(self.i[j+1],self.i[j][i])
-                i1 = binaryLower(self.i[j+1],self.i[j][i+1])
-                #print(f"i:[{self.i[j+1][i0]} : {self.i[j+1][i1]}]")
-            #print(f"[{v}] i:{i} i01:[{i0}:{i1}]  i:[{','.join(str(z) for z in self.i[j])}]  -> v:[{','.join(str(z) for z in self.v[j])}]")
-        #print(f"\tSliced j:{j+1} [{i0}:{i1}] i:[{self.i[j+1][i0]}:{self.i[j+1][i1]}]\n")
-        #print(f"Sliced j:{j+1} [{i0}:{i1}]")
-        return self._new_slice(j+1,i0,i1)
+                i = binaryIndex(self.v[j],value[j],i0,i1)
+                #print(f'i:{i}')
+                if i == None: raise BBIndexError(f"[{value[j]}] not found in column ({j})")
+            i0,i1 = self.i[j][i],self.i[j][i+1]
+            if j+1 < len(self.i):
+                i0,i1 = binaryLower(self.i[j+1],i0),binaryLower(self.i[j+1],i1)
+            j+=1
+        #print(f"Slice:[{i0}:{i1}]")
+        return self._new_slice(j,i0,i1)
 
 
     def __getitem__(self,x):
@@ -289,17 +296,16 @@ class BBIndex():
             if len(x)==self.n:
                 return self.index(x)
             if len(x)< self.n:
-                return self._subIndex(x)
+                return self.slice(x)
             raise IndexError(f"requested value {x} out of bounds")
 
         i = binaryIndex(self.v[0],x)
-        if i < 0: raise IndexError(f"[{x}] not found in first layer")
-        if len(self.i)==1:
-            i0 = self.i[0][i]
-            i1 = self.i[0][i+1]
-        else:
-            i0 = binaryLower(self.i[1],self.i[0][i])
-            i1 = binaryUpper(self.i[1],self.i[0][i+1])
+        if i == None: raise IndexError(f"[{x}] not found in first layer")
+        if len(self.i)==0:
+            return i
+        i0,i1 = self.i[0][i],self.i[0][i+1]
+        if len(self.i)>1:
+            i0,i1 = binaryLower(self.i[1],i0),binaryLower(self.i[1],i1)
         return self._new_slice(1,i0,i1)
 
 
@@ -366,134 +372,4 @@ class BBIndex():
         return '\n'.join(s[:-1]+[('{:^%i}'%max(len(x) for x in s)).format("...")]+s[-1:])
 
 
-    #------------------------------- (str) ---------------------------------------------------------------#
-
-
-
-
-
-
-
-
-
-
-
-
-
-    #------------------------------- (as)[str] ---------------------------------------------------------------#
-
-    """
-
-    #------------------------------- (as)[html] ---------------------------------------------------------------#
-    # Index
-    def to_html(self,maxrow=8,showall=False,**kwargs):
-        m,l = len(self),list(self)
-        if showall==True:maxrow=m
-        if m>maxrow:
-            clip = maxrow//2
-            i0,i1 = '\n'.join('<th>%i</th>'%x for x in range(0,clip)),'\n'.join('<th>%i</th>'%x for x in range(m-clip,m))
-            c0,c1 = self._html_tcol('td',self.dtype,l[:clip],l[-clip:])
-            body = '<tbody>%s</tbody><tbody>%s</tbody>'%(pystr.knit('<tr>\n'*clip,i0,c0,'</tr>\n'*clip),pystr.knit('<tr>\n'*clip,i1,c1,'</tr>\n'*clip))
-        else:
-            i = '\n'.join('<th>%i</th>'%x for x in range(0,m))
-            c = self._html_tcol('td',self.dtype,l)
-            body = '<tbody>%s</tbody>'%pystr.knit('<tr>\n'*m,i,c,'</tr>\n'*m)
-        foot = self.dtype._tfoot_() if hasattr(self.dtype,'_tfoot_') else '<td>%s</td>'%self.dtype.__name__
-        tfoot = "<tfoot><tr><th>{}</th>{}</tr></tfoot>\n".format(m,foot)
-        thead = "<thead><tr><th></th><td>{}</td></tr></thead>\n".format('' if self.name==None else self.name)
-        html = "<table class='arrpy'>\n{}{}{}</table>".format(thead,body,tfoot)
-        return "%s[%i]"%(self.__class__.__name__,m),html
-
-    def to_tcol(self,maxrow,td='td'):
-        m,l = len(self),list(self)
-        head = '<th>%s</th>'%('' if self.name==None else self.name)
-        if m>maxrow:
-            c0,c1 = self._html_tcol(td,self.dtype,l[:maxrow//2],l[-maxrow//2:])
-            return head,(c0,c1)
-        return head,self._html_tcol(td,self.dtype,l)
-
-    # MultiIndex
-
-    def to_html(self,maxrow=8,showall=False,**kwargs):
-        m = len(self)
-        if showall==True:maxrow=m
-        if m>maxrow:
-            clip = maxrow//2
-            inx = '\n'.join('<th>%i</th>'%x for x in range(self._s,self._s+clip)),'\n'.join('<th>%i</th>'%x for x in range(self._s+m-clip,self._s+m))
-            c0,c1 = (pystr.knit('<tr>\n'*clip,*c,'</tr>\n'*clip) for c in ([*z] for z in zip(inx,*([*self._html_tcol('td',dt,col[:clip],col[-clip:])] for dt,col in zip(self.dtype,self.data)))))
-            body = '<tbody>%s</tbody><tbody>%s</tbody>'%(c0,c1)
-        else:
-            inx = '\n'.join('<th>%i</th>'%x for x in range(self._s,self._s+m))
-            c = (self._html_tcol('td',dt,col) for dt,col in zip(self.dtype,self.data))
-            body = '<tbody>%s</tbody>'%pystr.knit('<tr>\n'*m,inx,*c,'</tr>\n'*m)
-        foot = ''.join(dt._tfoot_() if hasattr(dt,'_tfoot_') else '<td>%s</td>'%dt.__name__ for dt in self.dtype)
-        tfoot = '<tfoot><tr><th>{}</th>{}</tr></tfoot>\n'.format(m,foot)
-        thead = "<thead><tr><th></th>%s</tr></thead>\n"%(''.join('<td>%s</td>'%('' if x==None else x) for x in self.name))
-        html = "<table class='arrpy'>\n{}{}{}</table>".format(thead,body,tfoot)
-        return "%s[%ix%i]"%(self.__class__.__name__,m,self.nlvl),html
-
-    def to_tcol(self,maxrow,td='td'):
-        m = len(self)
-        head = ''.join('<th>%s</th>'%('' if x==None else x) for x in self.name)
-        if m>maxrow:
-            c0,c1 = (pystr.knit(*c) for c in ([*z] for z in zip(*([*self._html_tcol(td,dt,col[:maxrow//2],col[-maxrow//2:])] for dt,col in zip(self.dtype,self.data)))))
-            return head,(c0,c1)
-        return head,pystr.knit(*(self._html_tcol(td,dt,col) for dt,col in zip(self.dtype,self.data)))
-
-
-    # Typed LIST
-
-    @staticmethod
-    def _html_tcol(td,dt,*l):
-        if hasattr(dt,'_tbody_'):
-            return ('\n'.join(x._tbody_(td) for x in i) for i in l) if len(l)>1 else '\n'.join(x._tbody_(td) for x in l[0])
-        f = '<{0:}>{1:}</{0:}>'.format(td,'{:.3f}' if dt == float else '{}')
-        return ('\n'.join(f.format(x) for x in i) for i in l) if len(l)>1 else '\n'.join(f.format(x) for x in l[0])
-
-
-    def to_tcol(self,maxrow,td='td'):
-        m,l = len(self),list(self)
-        if m>maxrow:
-            c0,c1 = self._html_tcol(td,self.dtype,l[:maxrow//2],l[-maxrow//2:])
-            return c0,c1
-        return self._html_tcol(td,self.dtype,l)
-
-    def to_tcol(self,maxrow,td='td'):
-        m = len(self)
-        if m>maxrow:
-            c0,c1 = (pystr.knit(*c) for c in ([*z] for z in zip(*([*self._html_tcol(td,dt,col[:maxrow//2],col[-maxrow//2:])] for dt,col in zip(self.dtype,self.data)))))
-            return c0,c1
-        return pystr.knit(*(self._html_tcol(td,dt,col) for dt,col in zip(self.dtype,self.data)))
-
-    def to_html(self,maxrow=8,**kwargs):
-        m,l = len(self),list(self)
-        if 'showall' in kwargs and kwargs['showall']==True:maxrow=m
-        if m>maxrow:
-            clip = maxrow//2
-            i0,i1 = '\n'.join('<th>%i</th>'%x for x in range(0,clip)),'\n'.join('<th>%i</th>'%x for x in range(m-clip,m))
-            c0,c1 = self._html_tcol('td',self.dtype,l[:clip],l[-clip:])
-            body = '<tbody>%s</tbody><tbody>%s</tbody>'%(pystr.knit('<tr>\n'*clip,i0,c0,'</tr>\n'*clip),pystr.knit('<tr>\n'*clip,i1,c1,'</tr>\n'*clip))
-        else:
-            i = '\n'.join('<th>%i</th>'%x for x in range(0,m))
-            c = self._html_tcol('td',self.dtype,l)
-            body = '<tbody>%s</tbody>'%pystr.knit('<tr>\n'*m,i,c,'</tr>\n'*m)
-        foot = self.dtype._tfoot_() if hasattr(self.dtype,'_tfoot_') else '<td>%s</td>'%self.dtype.__name__
-        html = "<table class='arrpy'>\n{}<tfoot><tr><th>{}</th>{}</tr></tfoot>\n</table>".format(body,m,foot)
-        return "%s[%i]"%(self.__class__.__name__,m),html
-
-    def to_html(self,maxrow=8,**kwargs):
-        m = len(self)
-        if 'showall' in kwargs and kwargs['showall']==True:maxrow=m
-        if m>maxrow:
-
-            i0,i1 = '\n'.join('<th>%i</th>'%x for x in range(0,maxrow//2)),'\n'.join('<th>%i</th>'%x for x in range(m-maxrow//2,m))
-            c0,c1 = (pystr.knit('<tr>\n'*(maxrow//2),*c,'</tr>\n'*(maxrow//2)) for c in ([*z] for z in zip((i0,i1),*([*self._html_tcol('td',dt,col[:maxrow//2],col[-maxrow//2:])] for dt,col in zip(self.dtype,self.data)))))
-            body = '<tbody>%s</tbody><tbody>%s</tbody>'%(c0,c1)
-        else:
-            i = '\n'.join('<th>%i</th>'%x for x in range(0,m))
-            c = (self._html_tcol('td',dt,col) for dt,col in zip(self.dtype,self.data))
-            body = '<tbody>%s</tbody>'%pystr.knit('<tr>\n'*m,i,*c,'</tr>\n'*m)
-        foot = ''.join(dt._tfoot_() if hasattr(dt,'_tfoot_') else '<td>%s</td>'%dt.__name__ for dt in self.dtype)
-        html = "<table class='arrpy'>\n{}<tfoot><tr><th>{}</th>{}</tr></tfoot>\n</table>".format(body,m,foot)
-        return "%s[%ix%i]"%(self.__class__.__name__,m,self.nlvl),html
-    """
+    #------------------------------- (html) ---------------------------------------------------------------#

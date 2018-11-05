@@ -2,21 +2,19 @@
 
 import sys
 sys.path.append('/Users/luciancooper/projects/pymodule')
-import arrpy
+
+from bbmatrix.core import BBMatrix
 from bbsim.data import seasonlib
-from bbsim.frame import StatFrame
 from bbsim.roster import PPIDStatSim
 
 def main():
     print('Simulating Game Stats',file=sys.stderr)
     data = seasonlib('bbdata.xml')
-    index = arrpy.SetIndex(data.ppid,name=['year','team','pid'])
-    frame = StatFrame(index,PPIDStatSim.data_cols,dtype=PPIDStatSim.data_type)
-    sim = PPIDStatSim(frame)
+    matrix = BBMatrix(data.ppidIndex,PPIDStatSim.dcols,dtype=PPIDStatSim.dtype)
+    sim = PPIDStatSim(matrix)
     data.run(sim)
-    df = frame.to_dataframe()
     if not sys.stdout.isatty():
-        df.to_csv(sys.stdout,index=True)
+        matrix.to_csv(sys.stdout)
         return
 
 if __name__=='__main__':

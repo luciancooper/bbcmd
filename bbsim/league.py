@@ -1,9 +1,10 @@
 
-import arrpy
+import numpy as np
 import pandas as pd
 from pyutil.core import zipmap
-from .core import GameSim,RosterSim,GameSimError
-from .frame import REM
+from .core import GameSim,GameSimError
+from bbmatrix.rem import REMatrix
+
 
 ###########################################################################################################
 #                                         SeasonStatSim                                                   #
@@ -16,21 +17,21 @@ initYear(year)
 
 class SeasonStatSim(GameSim):
 
-    def __init__(self,frame,**kwargs):
+    def __init__(self,matrix,**kwargs):
         super().__init__(**kwargs)
-        self.frame = frame
-        self._data = None
+        self.matrix = matrix
+        self.yinx = None
 
     #------------------------------- [sim](Year) -------------------------------#
 
     def initYear(self,year):
-        self._data = self.frame.ix[year]
-        return super().initYear(year)
+        self.yinx = self.matrix.inx[year]
+        super().initYear(year)
 
     #------------------------------- [stat] -------------------------------#
 
     def _stat(self,stat,inc=1):
-        self._data[stat]+=inc
+        self.matrix[self.yinx,stat]+=inc
 
 
 ###########################################################################################################
@@ -39,7 +40,7 @@ class SeasonStatSim(GameSim):
 
 
 class LeagueStatSim(SeasonStatSim):
-    data_cols = ['PA','AB','O','E','SF','SH','K','BB','IBB','HBP','I','S','D','T','HR']
+    dcols = ['PA','AB','O','E','SF','SH','K','BB','IBB','HBP','I','S','D','T','HR']
 
     #------------------------------- [stats] -------------------------------#
 
@@ -75,11 +76,13 @@ class LeagueStatSim(SeasonStatSim):
 ###########################################################################################################
 
 class REMSim(SeasonStatSim):
-    data_cols = [*range(24)]
-    data_type = arrpy.count
+    dcols = [*range(24)]
+    dtype = ('u2','u2')
+
     def __init__(self,frame,paonly=False,**kwargs):
         super().__init__(frame,**kwargs)
-        self.states = [[0,0] for x in range(24)]
+        self.states = np.zeros((24,2),dtype=np.dtype('u1'))
+        #self.states = [[0,0] for x in range(24)]
         self.paonly = paonly
 
     #------------------------------- [cycle] -------------------------------#
@@ -97,25 +100,28 @@ class REMSim(SeasonStatSim):
     #------------------------------- [stat] -------------------------------#
 
     def _add_states(self):
-        for l,s in zip(self._data.row,self.states):
-            l+=s
+        for i in range(2):
+            self.matrix.data[i][self.yinx] += self.states[:,i]
+
+        #for l,s in zip(self._data.row,self.states):
+        #    l+=s
             #l[0],l[1] = l[0]+s[0],l[1]+s[1]
 
     def _clear_states(self):
-        for s in self.states:
-            s[0],s[1] = 0,0
+        self.states.fill(0)
 
     #------------------------------- [play] -------------------------------#
 
     def scorerun(self,*args):
-        for s in self.states:
-            s[1]+=s[0]
+        self.states[:,0] += self.states[:,1]
+        #for s in self.states: s[1]+=s[0]
         super().scorerun(*args)
 
     def _event(self,l):
         code = int(l[self.EVENT['code']])
         if not self.paonly or self.E_PA[code]:
-            self.states[self.baseoutstate][0]+=1
+            #self.states[self.baseoutstate][0]+=1
+            self.states[self.baseoutstate,1]+=1
         super()._event(l)
 
 ###########################################################################################################
@@ -125,18 +131,21 @@ class REMSim(SeasonStatSim):
 initYear(year)
 """
 class wOBAWeightSim(SeasonStatSim):
-    data_cols = ['O','E','SH','SF','K','BB','IBB','HBP','I','S','D','T','HR']
-    data_type = arrpy.count
+    dcols = ['O','E','SH','SF','K','BB','IBB','HBP','I','S','D','T','HR']
+    dtype = ('f2','u2')
+
     #statcode = [0,1,2,3,4,5,6,7,8,9,10] # BB(3)HBP(5)S(7)D(8)T(9)HR(10)
-    def __init__(self,rem_data,frame,**kwargs):
-        super().__init__(frame,**kwargs)
+    def __init__(self,rem_data,matrix,**kwargs):
+        super().__init__(matrix,**kwargs)
         self.rem_data = rem_data
+        self.rem = None
 
     #------------------------------- [sim](Year) -------------------------------#
 
     def initYear(self,year):
-        self.rem = REM(list(self.rem_data.ix[year]))
-        return super().initYear(year)
+        y = self.rem_data.inx[year]
+        self.rem = REMatrix(self.rem_data.data[0][y]/self.rem_data.data[1][y])
+        super().initYear(year)
 
     #------------------------------- [df] -------------------------------#
 

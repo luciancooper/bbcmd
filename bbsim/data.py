@@ -1,6 +1,7 @@
 
 import xml.etree.ElementTree as etree
 import progress
+import bbindex
 
 class seasonlib():
     def __init__(self,xmlfile):
@@ -25,20 +26,44 @@ class seasonlib():
         return [s.year for s in self.seasons]
 
     @property
+    def yearIndex(self):
+        return bbindex.BBIndex(('u2',),[[s.year for s in self.seasons]])
+
+    @property
     def pid(self):
         return [a for b in [s.pid for s in self.seasons] for a in b]
+
+    @property
+    def pidIndex(self):
+        data = [a for b in [s.pid for s in self.seasons] for a in b]
+        return bbindex.BBIndex(('u2','U1','U3','U8'),data,ids=['year','league','team','pid'])
 
     @property
     def ppid(self):
         return [a for b in [s.ppid for s in self.seasons] for a in b]
 
     @property
+    def ppidIndex(self):
+        data = [a for b in [s.ppid for s in self.seasons] for a in b]
+        return bbindex.BBIndex(('u2','U1','U3','U8'),data,ids=['year','league','team','pid'])
+
+    @property
     def gid(self):
         return [a for b in [s.gid for s in self.seasons] for a in b]
 
     @property
+    def gidIndex(self):
+        data = [a for b in [s.gid for s in self.seasons] for a in b]
+        return bbindex.BBIndex(('U15'),[data],ids=['gid'])
+
+    @property
     def gid_team(self):
         return [a for b in [i for j in [[[(g,0),(g,1)] for g in s.gid] for s in self.seasons] for i in j] for a in b]
+
+    @property
+    def gidTeamIndex(self):
+        data = [a for b in [i for j in [[[(g,0),(g,1)] for g in s.gid] for s in self.seasons] for i in j] for a in b]
+        return bbindex.BBIndex(('U15','u1'),data,ids=['gid','team'])
 
 
     def run(self,sim):
@@ -51,7 +76,7 @@ class seasonlib():
 
 
 class seasondata():
-    
+
     def __init__(self,node):
         self.year = int(node.attrib['year'])
         self.paths = {
@@ -89,11 +114,11 @@ class seasondata():
 
     @filepath('ROS')
     def pid(self,f):
-        return [(self.year,x[:3],x[4:12]) for x in f]
+        return [(self.year,x[0],x[2:5],x[6:14]) for x in f]
 
     @filepath('ROS')
     def ppid(self,f):
-        return [(self.year,x[:3],x[4:12]) for x in f if x[13]=='1']
+        return [(self.year,x[0],x[2:5],x[6:14]) for x in f if x[15]=='1']
 
     @property
     def gid(self):

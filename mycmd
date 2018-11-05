@@ -1,107 +1,82 @@
 #!/usr/bin/env python
 
-#print("Lucian's Command")
-
 import sys
 sys.path.append('/Users/luciancooper/projects/pymodule')
-import os
-import time
-import progress
-import pandas as pd
+import arrpy
 
-def main():
-    print('\n'+'\n'.join(sys.path)+'\n',file=sys.stdout)
-    print('cwd: %s'%os.getcwd(),file=sys.stdout)
-    print('cwd: %s'%os.getcwd(),file=sys.stderr)
-    for i,arg in enumerate(sys.argv):
-        #sys.stdout.write(arg)
-        print('arg[%i]: %s'%(i,arg),file=sys.stdout)
-        print('arg[%i]: %s'%(i,arg),file=sys.stderr)
+from bbmatrix.core import BBMatrix
+from bbsim.data import seasonlib
+from bbsim.league import LeagueStatSim
+from bbsim.games import ScoreSim,GameStatSim
+from bbsim.roster import PIDStatSim,PPIDStatSim
 
 
-def inc_bar():
-    bar = progress.IncrementalBar(100,prefix='Processing')
-    for i in bar:
-        time.sleep(0.05)
-
-def multi_bar():
-    bar = progress.MultiBar(2,5,'First Level')
-    for i in range(len(bar)):
-        for x in bar.iter(range(50),'Second Level (%i)'%i):
-            time.sleep(0.05)
-        #for x in bar.init(50,'Second Level (%i)'%i):
-        #    time.sleep(0.05)
+#print("Lucian's Command")
 
 
-def clear_line():
-    print('\r\x1b[K', end='', file=sys.stderr)
-
-def write_line(s):
-    #print(s, end='',file=sys.stderr)
-    print(s, file=sys.stderr)
-    sys.stderr.flush()
-
-def hide_cursor():
-    print('\x1b[?25l', end='', file=sys.stderr)
-
-def show_cursor():
-    print('\x1b[?25h', end='', file=sys.stderr)
-
-HIDE_CURSOR = '\x1b[?25l'
-SHOW_CURSOR = '\x1b[?25h'
-CURSOR_UP_ONE = '\x1b[1A'
-
-CURSOR_HOME = '\r'
-CURSOR_FORWARD = '\x1b[C'
-CURSOR_BACKWARD = '\x1b[D'
-CURSOR_NEXT = '\x1b[E'
-CURSOR_PREV = '\x1b[F'
-#CURSOR_END = '\x1b[E'
-#ERASE_LINE = '\r\x1b[K'
-
-ERASE_LINE_END = '\x1b[K'
-ERASE_LINE_START = '\x1b[1K'
-#ERASE_LINE = '\x1b[2K'
-ERASE_LINE = '\r\x1b[K'
+# bbstat-mlb
 
 
-def console_lines():
-    #print(HIDE_CURSOR,end='')
-    print('Lucian 1',flush=True)
-    time.sleep(1)
-    print('Lucian 2',flush=True)
-    time.sleep(1)
-    print(CURSOR_UP_ONE,end='')
-    print(ERASE_LINE,end='',flush=True)
-    time.sleep(1)
-    print(CURSOR_UP_ONE,end='')
-    print(ERASE_LINE,end='',flush=True)
-    time.sleep(1)
-    print('Lucian 3',flush=True)
-    time.sleep(1)
-    print('Lucian 4',flush=True)
-    time.sleep(1)
-    #print(SHOW_CURSOR,end='')
+def bbstat_mlb():
+    data = seasonlib('bbdata.xml')
+    matrix = BBMatrix(data.yearIndex,LeagueStatSim.dcols,dtype=LeagueStatSim.dtype)
+    sim = LeagueStatSim(matrix)
+    data.run(sim)
+    if not sys.stdout.isatty():
+        matrix.to_csv(sys.stdout)
+        return
 
-def anci_exp():
-    print('Lucian 1\nLucian 2',end='',flush=True)
-    time.sleep(2)
-    print(CURSOR_BACKWARD,end='')
-    print(CURSOR_BACKWARD,end='',flush=True)
-    time.sleep(2)
-    print(ERASE_LINE,end='',flush=True)
-    time.sleep(2)
 
-if __name__=='__main__':
-    #df = pd.DataFrame([[0,1],[2,3]],index=['A','B'],columns=['X','Y'])
-    #df.to_csv(sys.stdout,index=True)
-    #print(df)
-    multi_bar()
-    #main()
-    #loadbar()
-    #console_lines()
 
-    #print(CURSOR_FORWARD,end='',flush=True)
-    #time.sleep(2)
-    #print(SHOW_CURSOR,end='')
-    #time.sleep(1)
+# bgame-score
+
+def bgame_score():
+    data = seasonlib('bbdata.xml')
+    matrix = BBMatrix(data.gidIndex,ScoreSim.dcols,dtype=ScoreSim.dtype)
+    sim = ScoreSim(matrix)
+    data.run(sim)
+    if not sys.stdout.isatty():
+        matrix.to_csv(sys.stdout)
+        return
+
+# bgame-stat
+
+def bgame_stat():
+    data = seasonlib('bbdata.xml')
+    matrix = BBMatrix(data.gidTeamIndex,GameStatSim.dcols,dtype=GameStatSim.dtype)
+    sim = GameStatSim(matrix)
+    data.run(sim)
+    if not sys.stdout.isatty():
+        matrix.to_csv(sys.stdout)
+        return
+
+
+# bstat-pid
+
+def bstat_pid():
+    data = seasonlib('bbdata.xml')
+    matrix = BBMatrix(data.pidIndex,PIDStatSim.dcols,dtype=PIDStatSim.dtype)
+    sim = PIDStatSim(matrix)
+    data.run(sim)
+    if not sys.stdout.isatty():
+        matrix.to_csv(sys.stdout)
+        return
+
+
+# bstat-ppid
+
+def bstat_ppid():
+    data = seasonlib('bbdata.xml')
+    matrix = BBMatrix(data.ppidIndex,PPIDStatSim.dcols,dtype=PPIDStatSim.dtype)
+    sim = PPIDStatSim(matrix)
+    data.run(sim)
+    if not sys.stdout.isatty():
+        matrix.to_csv(sys.stdout)
+        return
+
+
+
+
+
+
+# bstat-woba

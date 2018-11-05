@@ -4,20 +4,18 @@ import sys
 sys.path.append('/Users/luciancooper/projects/pymodule')
 import arrpy
 
+from bbmatrix.core import BBMatrix
 from bbsim.data import seasonlib
-from bbsim.frame import StatFrame
 from bbsim.roster import PIDStatSim
 
 def main():
     print('Simulating Game Stats',file=sys.stderr)
     data = seasonlib('bbdata.xml')
-    index = arrpy.SetIndex(data.pid,name=['year','team','pid'])
-    frame = StatFrame(index,PIDStatSim.data_cols,dtype=PIDStatSim.data_type)
-    sim = PIDStatSim(frame)
+    matrix = BBMatrix(data.pidIndex,PIDStatSim.dcols,dtype=PIDStatSim.dtype)
+    sim = PIDStatSim(matrix)
     data.run(sim)
-    df = frame.to_dataframe()
     if not sys.stdout.isatty():
-        df.to_csv(sys.stdout,index=True)
+        matrix.to_csv(sys.stdout)
         return
 
 if __name__=='__main__':

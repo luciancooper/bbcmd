@@ -106,29 +106,25 @@ class BBIndexSlice():
         i0,i1,n = self.i0,self.i1,len(self.pointer.i)
         for (j,v) in zip(range(self.j,n),value):
             i = binaryIndex(self.pointer.v[j],v,i0,i1)
-            if i < 0: raise BBIndexError(f"[{v}] not found in index ({j})")
+            if i == None: raise BBIndexError(f"[{v}] not found in index ({j})")
             if j+1 == n:
-                j0,j1 = self.pointer.i[j][i],self.pointer.i[j][i+1]
-            else:
-                j0 = binaryLower(self.pointer.i[j+1],self.pointer.i[j][x])
-                j1 = binaryUpper(self.pointer.i[j+1],self.pointer.i[j][x+1])
-        return binaryIndex(self.pointer.v[-1],value[-1],j0,j1)
-
-    def _subIndex(self,value):
-        i0,i1,n = self.i0,self.i1,len(self.pointer.i)
-        for (j,v) in zip(range(self.j,n),value):
-            i = binaryIndex(self.pointer.v[j],v,i0,i1)
-            if i < 0: raise BBIndexError(f"[{v}] not found in index ({j})")
-            if j+1 == n:
-                i0 = self.pointer.i[j][i]
-                i1 = self.pointer.i[j][i+1]
+                i0,i1 = self.pointer.i[j][i],self.pointer.i[j][i+1]
             else:
                 i0 = binaryLower(self.pointer.i[j+1],self.pointer.i[j][i])
                 i1 = binaryUpper(self.pointer.i[j+1],self.pointer.i[j][i+1])
+        return binaryIndex(self.pointer.v[-1],value[-1],i0,i1)
 
+    def slice(self,value):
+        i0,i1,n = self.i0,self.i1,len(self.pointer.i)
+        for (j,v) in zip(range(self.j,n),value):
+            i = binaryIndex(self.pointer.v[j],v,i0,i1)
+            if i == None: raise BBIndexError(f"[{v}] not found in index ({j})")
+            if j+1 == n:
+                i0,i1 = self.pointer.i[j][i],self.pointer.i[j][i+1]
+            else:
+                i0 = binaryLower(self.pointer.i[j+1],self.pointer.i[j][i])
+                i1 = binaryUpper(self.pointer.i[j+1],self.pointer.i[j][i+1])
         return self.pointer._new_slice(j,i0,i1)
-
-
 
     def __getitem__(self,x):
         if type(x)==slice:
@@ -137,24 +133,17 @@ class BBIndexSlice():
             if len(x)==self.n:
                 return self.index(x)
             if len(x)< self.n:
-                return self._subIndex(x)
+                return self.slice(x)
             raise IndexError(f"requested value {x} out of bounds")
 
         i = binaryIndex(self.pointer.v[self.j],x,self.i0,self.i1)
-        if i < 0: raise IndexError(f"[{x}] not found in first layer")
-
-        if len(self.pointer.i)-self.j==1:
-            i0 = self.pointer.i[self.j][i]
-            i1 = self.pointer.i[self.j][i+1]
-        else:
-            i0 = binaryLower(self.pointer.i[self.j+1],self.pointer.i[self.j][i])
-            i1 = binaryUpper(self.pointer.i[self.j+1],self.pointer.i[self.j][i+1])
+        if i == None: raise IndexError(f"[{x}] not found in first layer")
+        if len(self.pointer.i)-self.j==0:
+            return i
+        i0,i1 = self.pointer.i[self.j][i],self.pointer.i[self.j][i+1]
+        if len(self.pointer.i)-self.j>1:
+            i0,i1 = binaryLower(self.pointer.i[self.j+1],i0),binaryUpper(self.pointer.i[self.j+1],i1)
         return self.pointer._new_slice(self.j+1,i0,i1)
-
-
-
-
-
 
     #------------------------------- (convert) ---------------------------------------------------------------#
 

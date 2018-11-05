@@ -91,6 +91,8 @@ class GameSim():
         self.gameid = None
         # Teams
         self.teams = None
+        # Leagues
+        self.leagues = None
         # Site ID
         self.site = None
         # If game is using the Designated Hitter rule
@@ -108,6 +110,7 @@ class GameSim():
 
     #------------------------------- (Sim)[frame] -------------------------------#
     data_type = int
+    dtype = 'u2'
 
     def setFrame(self,frame):
         self.frame=frame
@@ -116,19 +119,10 @@ class GameSim():
     def df(self):
         return self.frame.to_dataframe()
 
-    def initFrame(self,years):
-        return StatFrame(self._frameIndex(years),self._framecol,dtype=self._frametype)
-
-    @staticmethod
-    def _frameIndex(years):
-        raise GameSimError('No Frame Index Generator Implemented')
-
-
-
     #------------------------------- [sim](Year) -------------------------------#
 
     def initYear(self,year):
-        return self
+        pass
 
     #------------------------------- [simgame] -------------------------------#
 
@@ -148,9 +142,10 @@ class GameSim():
         self._final(l)
         self._clear()
 
-    def _gameinfo(self,gameid,dh,htbf,site):
+    def _gameinfo(self,gameid,dh,htbf,site,hlg,alg):
         self.gameid = gameid
         self.teams = (gameid[11:14],gameid[8:11])
+        self.leagues = (alg,hlg)
         self.useDH = int(dh)
         self.t = int(htbf)
         self.site = site
@@ -176,7 +171,7 @@ class GameSim():
 
     def _clear(self):
         '''Clears the simulator in preparation for next game'''
-        self.gameid,self.site,self.teams = None,None,None
+        self.gameid,self.site,self.teams,self.leagues = None,None,None,None
         self.bflg = 0
         self.i,self.t,self.o=0,0,0
         self.score,self.lob = [0,0],[0,0]
@@ -206,6 +201,12 @@ class GameSim():
     @property
     def awayteam(self):
         return self.teams[0]
+    @property
+    def homeleague(self):
+        return self.leagues[1]
+    @property
+    def awayleague(self):
+        return self.leagues[0]
     @property
     def baseoutstate(self):
         return self.o<<3|self.bflg

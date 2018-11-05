@@ -5,6 +5,7 @@ from pyutil.core import zipmap
 from .core import RosterSim,GameSimError
 
 
+
 ###########################################################################################################
 #                                         RosterStatSim                                                   #
 ###########################################################################################################
@@ -17,35 +18,37 @@ _gameinfo
 
 class RosterStatSim(RosterSim):
 
-    def __init__(self,frame,**kwargs):
+    def __init__(self,matrix,**kwargs):
         super().__init__(**kwargs)
-        self.frame = frame
-        self._yframe,self._tframe = None,None
+        self.matrix = matrix
+        self.yinx = None
+        self.tinx = None
 
     #------------------------------- [sim](Year) -------------------------------#
 
     def initYear(self,year):
-        self._yframe = self.frame.ix[year]
-        return super().initYear(year)
+        self.yinx = self.matrix.inx[year]
+        super().initYear(year)
 
     #------------------------------- [lib/game] -------------------------------#
 
-    def _gameinfo(self,gameid,*info):
-        h,a = gameid[8:11],gameid[11:14]
-        self._tframe = self._yframe.ix[a],self._yframe.ix[h]
-        super()._gameinfo(gameid,*info)
+    def _gameinfo(self,*info):
+        super()._gameinfo(*info)
+        self.tinx = (self.yinx[self.awayleague,self.awayteam],self.yinx[self.homeleague,self.hometeam])
+
 
     def _clear(self):
         super()._clear()
-        self._tframe = None
+        self.tinx = None
 
     #------------------------------- [stat] -------------------------------#
 
     def _stat(self,t,pid,stat,inc=1):
-        self._tframe[t][pid,stat]+=inc
+        self.matrix[self.tinx[t][pid],stat] += inc
+
     def _stats(self,t,pid,stats,inc=1):
         for stat in stats:
-            self._tframe[t][pid,stat]+=inc
+            self.matrix[self.tinx[t][pid],stat] += inc
 
 
 ###########################################################################################################
@@ -53,7 +56,7 @@ class RosterStatSim(RosterSim):
 ###########################################################################################################
 
 class FposOutSim(RosterStatSim):
-    data_cols = ['P','C','1B','2B','3B','SS','LF','CF','RF','DH']
+    dcols = ['P','C','1B','2B','3B','SS','LF','CF','RF','DH']
 
     #------------------------------- [play] -------------------------------#
 
@@ -67,7 +70,7 @@ class FposOutSim(RosterStatSim):
 ###########################################################################################################
 
 class AppearanceSim(RosterStatSim):
-    data_cols = ['G','GS','cGB','GB','GD','P','C','1B','2B','3B','SS','LF','CF','RF','DH','PH','PR']
+    dcols = ['G','GS','cGB','GB','GD','P','C','1B','2B','3B','SS','LF','CF','RF','DH','PH','PR']
 
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
@@ -250,7 +253,7 @@ class AppearanceSim(RosterStatSim):
 ###########################################################################################################
 
 class LahmanAppearanceSim(RosterStatSim):
-    data_cols = ['G','GS','GB','GD','P','C','1B','2B','3B','SS','LF','CF','RF','DH','PH','PR']
+    dcols = ['G','GS','GB','GD','P','C','1B','2B','3B','SS','LF','CF','RF','DH','PH','PR']
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
         # List of players who have been in the game
@@ -358,7 +361,7 @@ class LahmanAppearanceSim(RosterStatSim):
 ###########################################################################################################
 
 class PIDStatSim(RosterStatSim):
-    data_cols = ['PA','AB','S','D','T','HR','BB','IBB','HBP','K','I','SH','SF','R','RBI','GDP']+['SB','CS','PO']+['P','A','E']
+    dcols = ['PA','AB','S','D','T','HR','BB','IBB','HBP','K','I','SH','SF','R','RBI','GDP']+['SB','CS','PO']+['P','A','E']
 
     #------------------------------- [stats] -------------------------------#
 
@@ -433,7 +436,7 @@ class PIDStatSim(RosterStatSim):
 frameIndex(years)
 """
 class PPIDStatSim(RosterStatSim):
-    data_cols = ['W','L','SV','IP','BF','R','ER','S','D','T','HR','BB','HBP','IBB','K','BK','WP','PO','GDP']
+    dcols = ['W','L','SV','IP','BF','R','ER','S','D','T','HR','BB','HBP','IBB','K','BK','WP','PO','GDP']
 
     #------------------------------- [play] -------------------------------#
 

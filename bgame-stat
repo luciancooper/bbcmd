@@ -2,24 +2,21 @@
 
 import sys
 sys.path.append('/Users/luciancooper/projects/pymodule')
-import arrpy
 
+from bbmatrix.core import BBMatrix
 from bbsim.data import seasonlib
-from bbsim.frame import StatFrame
 from bbsim.games import GameStatSim
 
 def main():
     print('Simulating Game Stats',file=sys.stderr)
     data = seasonlib('bbdata.xml')
-    index = arrpy.SetIndex(data.gid_team,name=['gid','team'])
-    frame = StatFrame(index,GameStatSim.data_cols,dtype=GameStatSim.data_type)
-    sim = GameStatSim(frame)
+    matrix = BBMatrix(data.gidTeamIndex,GameStatSim.dcols,dtype=GameStatSim.dtype)
+    sim = GameStatSim(matrix)
     data.run(sim)
-    df = frame.to_dataframe()
     if not sys.stdout.isatty():
-        df.to_csv(sys.stdout,index=True)
+        matrix.to_csv(sys.stdout)
         return
-    
+
 
 if __name__=='__main__':
     main()
