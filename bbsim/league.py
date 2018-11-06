@@ -1,4 +1,5 @@
 
+from arrpy.inx import SeqIndex
 import numpy as np
 import pandas as pd
 from pyutil.core import zipmap
@@ -31,7 +32,8 @@ class SeasonStatSim(GameSim):
     #------------------------------- [stat] -------------------------------#
 
     def _stat(self,stat,inc=1):
-        self.matrix[self.yinx,stat]+=inc
+        j = self.dcols[stat]
+        self.matrix[self.yinx,j]+=inc
 
 
 ###########################################################################################################
@@ -40,8 +42,9 @@ class SeasonStatSim(GameSim):
 
 
 class LeagueStatSim(SeasonStatSim):
-    dcols = ['PA','AB','O','E','SF','SH','K','BB','IBB','HBP','I','S','D','T','HR']
-
+    _prefix_ = 'MLB'
+    dcols = SeqIndex(['PA','AB','O','E','SF','SH','K','BB','IBB','HBP','I','S','D','T','HR'])
+    dtype = 'u4'
     #------------------------------- [stats] -------------------------------#
 
     def _event(self,l):
@@ -76,6 +79,8 @@ class LeagueStatSim(SeasonStatSim):
 ###########################################################################################################
 
 class REMSim(SeasonStatSim):
+    _prefix_ = 'REM'
+
     dcols = [*range(24)]
     dtype = ('u2','u2')
 
@@ -131,9 +136,11 @@ class REMSim(SeasonStatSim):
 initYear(year)
 """
 class wOBAWeightSim(SeasonStatSim):
-    dcols = ['O','E','SH','SF','K','BB','IBB','HBP','I','S','D','T','HR']
-    dtype = ('f2','u2')
+    _prefix_ = 'wOBA'
 
+    
+    dcols = SeqIndex(['O','E','SH','SF','K','BB','IBB','HBP','I','S','D','T','HR'])
+    dtype = ('f4','u4')
     #statcode = [0,1,2,3,4,5,6,7,8,9,10] # BB(3)HBP(5)S(7)D(8)T(9)HR(10)
     def __init__(self,rem_data,matrix,**kwargs):
         super().__init__(matrix,**kwargs)
@@ -162,6 +169,10 @@ class wOBAWeightSim(SeasonStatSim):
 
     def _calcRE24(self,ss,es,rs):
         return -self.rem[ss]+rs if es>=24 else self.rem[es]-self.rem[ss]+rs
+
+    def _stat(self,stat,inc=1):
+        j = self.dcols[stat]
+        self.matrix[self.yinx,j]+=(inc,1)
 
     #------------------------------- [play] -------------------------------#
 

@@ -24,7 +24,7 @@ class MultiBar():
     }
     fill = ('#',' ')
 
-    def __init__(self,lvl,max=None,message='',flavor=None,**kwargs):
+    def __init__(self,lvl,max=None,prefix='',flavor=None,**kwargs):
         if flavor:
             self.phases = self.flavors[flavor.lower()]
         self._inx = [0]*lvl
@@ -33,11 +33,12 @@ class MultiBar():
         self._sts = [None]*lvl
         self._ts = [None]*lvl
         self._max = [None]*lvl
-        self._message = ['']*lvl
+        self._prefix = ['']*lvl
+        self._prefixFormat = "{:<0}"
         self._i = -1
 
         if (max!=None):
-            self.init(max,message)
+            self.init(max,prefix)
         for k,v in kwargs.items():
             setattr(self,k,v)
         if self.out.isatty():
@@ -49,35 +50,26 @@ class MultiBar():
     @property
     def sts(self):
         return self._sts[self._i]
-    @sts.setter
-    def sts(self,x):
-        self._sts[self._i] = x
+
     @property
     def ts(self):
         return self._ts[self._i]
-    @ts.setter
-    def ts(self,x):
-        self._ts[self._i] = x
     @property
     def max(self):
         return self._max[self._i]
-    @max.setter
-    def max(self,x):
-        self._max[self._i]=x
     @property
     def inx(self):
         return self._inx[self._i]
-    @inx.setter
-    def inx(self,x):
-        self._inx[self._i]=x
 
     @property
-    def message(self):
-        return self._message[self._i]
-    @message.setter
-    def message(self,x):
-        self._message[self._i]=x
+    def prefix(self):
+        return self._prefixFormat.format(self._prefix[self._i])
 
+    def _set_prefix(self,i,prefix):
+        self._prefix[i] = prefix
+        m = max(len(x) for x in self._prefix)
+        self._prefixFormat = '{:<0}' if m==0 else '{:<%i}'%(m+1)
+    
     @property
     def avg(self):
         return self._avg[self._i]
@@ -121,13 +113,12 @@ class MultiBar():
         self.finish()
         raise StopIteration()
 
-    def iter(self,it,message=None):
+    def iter(self,it,prefix=''):
         try:
             max = len(it)
-            self.init(max,'' if message==None else message)
+            self.init(max,prefix)
         except TypeError:
-            if message:
-                self.message = message
+            self._set_prefix(self._i,prefix)
         try:
             for x in it:
                 yield x
@@ -144,8 +135,8 @@ class MultiBar():
         if n>0:
             self.ma.append((now-self.ts)/n)
             self.avg = sum(self.ma)/len(self.ma)
-        self.ts = now
-        self.inx+=n
+        self._ts[self._i] = now
+        self._inx[self._i] += n
         return self.inx-n
 
     def inc(self,n=1): # next
@@ -153,17 +144,18 @@ class MultiBar():
         self.update()
         return i
 
-    def init(self,max,message=''):
+    def init(self,max,prefix=''):
+        i = self._i+1
+        self._inx[i]=0
+        self._max[i]=max
+        self._set_prefix(i,prefix)
+        self._sts[i] = time()
+        self._ts[i] = self._sts[i]
+
         if self._i>=0:
             self.update()
             print(file=self.out)
-
-        self._i+=1
-        self.sts = time()
-        self.ts = self.sts
-        self.inx = 0
-        self.max = max
-        self.message = message
+        self._i = i
         return self
 
     def start(self):
@@ -176,11 +168,11 @@ class MultiBar():
             print(SHOW_CURSOR, end='', file=self.out)
             return True
         # Clear Level
-        self.sts = None
-        self.ts = None
-        self.inx = 0
-        self.max = None
-        self.message = ''
+        self._sts[self._i] = None
+        self._ts[self._i] = None
+        self._inx[self._i]=0
+        self._max[self._i]= None
+        self._set_prefix(self._i,'')
         self.ma.clear()
         # Erase Line
         print(ERASE_LINE, end='',file=self.out)
@@ -203,9 +195,9 @@ class MultiBar():
         current = self.phases[phase] if phase > 0 else ''
         bar = self.phases[-1]*nfull+current+self.fill[1]*max(0,nempty-len(current))
         #print('self.prefix',self.prefix)
-        message = self.message.format(self)
+        prefix = self.prefix
         suffix = self.suffix.format(self)
-        line = (self.bar_padding%bar)+suffix+' '+message
+        line = prefix+(self.bar_padding%bar)+suffix
         if self.out.isatty():
             print(ERASE_LINE,end='',file=self.out)
             print(line,end='',file=self.out,flush=True)

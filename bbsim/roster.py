@@ -1,6 +1,7 @@
 
 
 import arrpy
+from arrpy.inx import SeqIndex
 from pyutil.core import zipmap
 from .core import RosterSim,GameSimError
 
@@ -44,11 +45,15 @@ class RosterStatSim(RosterSim):
     #------------------------------- [stat] -------------------------------#
 
     def _stat(self,t,pid,stat,inc=1):
-        self.matrix[self.tinx[t][pid],stat] += inc
+        #print(f"away [{self.awayleague},{self.awayteam}] home [{self.homeleague},{self.hometeam}]")
+        j = self.dcols[stat]
+        self.matrix[self.tinx[t][pid],j] += inc
+
 
     def _stats(self,t,pid,stats,inc=1):
         for stat in stats:
-            self.matrix[self.tinx[t][pid],stat] += inc
+            j = self.dcols[stat]
+            self.matrix[self.tinx[t][pid],j] += inc
 
 
 ###########################################################################################################
@@ -56,7 +61,7 @@ class RosterStatSim(RosterSim):
 ###########################################################################################################
 
 class FposOutSim(RosterStatSim):
-    dcols = ['P','C','1B','2B','3B','SS','LF','CF','RF','DH']
+    dcols = SeqIndex(['P','C','1B','2B','3B','SS','LF','CF','RF','DH'])
 
     #------------------------------- [play] -------------------------------#
 
@@ -70,7 +75,7 @@ class FposOutSim(RosterStatSim):
 ###########################################################################################################
 
 class AppearanceSim(RosterStatSim):
-    dcols = ['G','GS','cGB','GB','GD','P','C','1B','2B','3B','SS','LF','CF','RF','DH','PH','PR']
+    dcols = SeqIndex(['G','GS','cGB','GB','GD','P','C','1B','2B','3B','SS','LF','CF','RF','DH','PH','PR'])
 
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
@@ -253,7 +258,7 @@ class AppearanceSim(RosterStatSim):
 ###########################################################################################################
 
 class LahmanAppearanceSim(RosterStatSim):
-    dcols = ['G','GS','GB','GD','P','C','1B','2B','3B','SS','LF','CF','RF','DH','PH','PR']
+    dcols = SeqIndex(['G','GS','GB','GD','P','C','1B','2B','3B','SS','LF','CF','RF','DH','PH','PR'])
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
         # List of players who have been in the game
@@ -361,7 +366,9 @@ class LahmanAppearanceSim(RosterStatSim):
 ###########################################################################################################
 
 class PIDStatSim(RosterStatSim):
-    dcols = ['PA','AB','S','D','T','HR','BB','IBB','HBP','K','I','SH','SF','R','RBI','GDP']+['SB','CS','PO']+['P','A','E']
+
+    _prefix_ = "PID"
+    dcols = SeqIndex(['PA','AB','S','D','T','HR','BB','IBB','HBP','K','I','SH','SF','R','RBI','GDP']+['SB','CS','PO']+['P','A','E'])
 
     #------------------------------- [stats] -------------------------------#
 
@@ -436,8 +443,9 @@ class PIDStatSim(RosterStatSim):
 frameIndex(years)
 """
 class PPIDStatSim(RosterStatSim):
-    dcols = ['W','L','SV','IP','BF','R','ER','S','D','T','HR','BB','HBP','IBB','K','BK','WP','PO','GDP']
+    dcols = SeqIndex(['W','L','SV','IP','BF','R','ER','S','D','T','HR','BB','HBP','IBB','K','BK','WP','PO','GDP'])
 
+    _prefix_ = "PPID"
     #------------------------------- [play] -------------------------------#
 
     def scorerun(self,pid,ppid,flag):

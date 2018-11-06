@@ -40,6 +40,20 @@ class BBIndex():
     def empty(self):
         return len(self)==0
 
+    @property
+    def slice(self):
+        return slice(self.startIndex,self.endIndex)
+
+    @property
+    def startIndex(self):
+        return 0
+
+    @property
+    def endIndex(self):
+        return len(self)
+
+
+
     #------------------------------- (instance) ---------------------------------------------------------------#
 
     def __init__(self,dtype,data,ids=None):
@@ -58,7 +72,8 @@ class BBIndex():
 
 
     def __del__(self):
-        self.i,self.v,self.dtype = None,None,None
+        #print(f"{self.__class__.__name__}.__del__()")
+        self.i,self.v,self.dtype,self.ids = None,None,None,None
 
     #------------------------------- (dtype)[none] ---------------------------------------------------------------#
 
@@ -247,7 +262,8 @@ class BBIndex():
         return None
 
 
-    def index(self,value):
+
+    def _index_(self,value):
         j,i0,i1 = 0,0,len(self.v[0])
         while j < len(self.i):
             if value[j]=='*':
@@ -267,7 +283,7 @@ class BBIndex():
         return binaryIndex(self.v[j],value[j],i0,i1)
 
 
-    def slice(self,value):
+    def _slice_(self,value):
         i0,i1,j = 0,len(self.v[0]),0
         while j < len(value):
             if value[j]=='*':
@@ -294,9 +310,9 @@ class BBIndex():
             raise IndexError(f"BBIndex slice handling not implemented {x}")
         if type(x)==tuple:
             if len(x)==self.n:
-                return self.index(x)
+                return self._index_(x)
             if len(x)< self.n:
-                return self.slice(x)
+                return self._slice_(x)
             raise IndexError(f"requested value {x} out of bounds")
 
         i = binaryIndex(self.v[0],x)
@@ -346,7 +362,7 @@ class BBIndex():
         return self._toStr()
 
     def __repr__(self):
-        return self._toStr(showall=True)
+        return self._toStr()
 
     def _toStr(self,maxrows=16,showall=False):
         m = len(self)
@@ -361,8 +377,7 @@ class BBIndex():
         d = []
         for (v,i) in zip(self.v,self.i):
             i0 = binaryLower(i,maxrows-1)
-            n = [*mapPairs(list(i[:i0+1])+[maxrows-i[i0]],lambda a,b : b-a)]+[1]
-            #print(f'n:{n}')
+            n = [*mapPairs(list(i[:i0+1])+[maxrows],lambda a,b : b-a)]+[1]
             d += [strCol(list(v[:i0+1])+list(v[-1:]),n)]
 
         d += [strCol(list(self.v[-1][:maxrows])+list(self.v[-1][-1:]))]

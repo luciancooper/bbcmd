@@ -49,6 +49,8 @@ class GameSimError(Exception):
 
 class GameSim():
 
+    _prefix_ = ''
+
     AB = { 'O':1,'E':1,'SH':0,'SF':0,'I':0,'K':1,'BB':0,'IBB':0,'HBP':0,'S':1,'D':1,'T':1,'HR':1 }
     E_STR = ('O','E','K','BB','IBB','HBP','I','S','D','T','HR','WP','PB','DI','OA','RUNEVT','BK','FLE')
     E_PA = (1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0)
@@ -109,7 +111,6 @@ class GameSim():
         self.lib=None
 
     #------------------------------- (Sim)[frame] -------------------------------#
-    data_type = int
     dtype = 'u2'
 
     def setFrame(self,frame):

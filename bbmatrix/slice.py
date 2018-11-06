@@ -1,6 +1,6 @@
 
 import numpy as np
-from .util import DataMatrixError
+from .util import BBMatrixError
 
 
 
@@ -38,23 +38,23 @@ class BBMatrixSlice():
     #------------------------------- (access)[get/set] -------------------------------#
 
     def __getitem__(self,x):
-        if type(x)==tuple:
-            i,j = x
-            if type(j)!=int:
-                j = self.pointer.cols[j]
-            if type(i)!=int:
-                i = self.inx[i]
-            return self.pointer.data[i,j]
-        raise DataMatrixError('error on get[{}]'.format(x))
+        if type(x)!=tuple:
+            raise BBMatrixError('error on get[{}]'.format(x))
+        i,j = x
+        if type(j)!=int:
+            j = self.pointer.cols[j]
+        if type(i)!=int:
+            i = self.inx[i]
+        return self.pointer.data[i,j]
+
 
 
     def __setitem__(self,x,v):
-        if type(x)==tuple:
-            i,j = x
-            if type(j)!=int:
-                j = self.pointer.cols[j]
-            if type(i)!=int:
-                i = self.inx[i]
-            self.pointer.data[i,j] = v
-        else:
-            raise DataMatrixError('error on set[{}] = {}'.format(x,v))
+        if type(x)!=tuple:
+            raise BBMatrixError('error on set[{}] = {}'.format(x,v))
+        i,j = x
+        if type(j)!=int:
+            j = self.pointer.cols[j]
+        if type(i)!=int:
+            i = self.inx[i]
+        self.pointer.data[i,j] = v

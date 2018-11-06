@@ -5,12 +5,14 @@ sys.path.append('/Users/luciancooper/projects/pymodule')
 import arrpy
 
 from bbmatrix.core import BBMatrix
+from bbframe.core import BBFrame
 from bbsim.data import seasonlib
 from bbsim.roster import PIDStatSim
 
 def main():
     print('Simulating Game Stats',file=sys.stderr)
     data = seasonlib('bbdata.xml')
+    #matrix = BBFrame(data.pidIndex,PIDStatSim.dcols)
     matrix = BBMatrix(data.pidIndex,PIDStatSim.dcols,dtype=PIDStatSim.dtype)
     sim = PIDStatSim(matrix)
     data.run(sim)

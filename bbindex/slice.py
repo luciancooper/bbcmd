@@ -41,13 +41,14 @@ class BBIndexSlice():
         return self.pointer.i[self.j][self.i1]
 
     @property
-    def indexSlice(self):
+    def slice(self):
         return slice(self.startIndex,self.endIndex)
 
     #------------------------------- (instance) ---------------------------------------------------------------#
 
 
     def __del__(self):
+        #print(f"{self.__class__.__name__}.__del__({self.j})")
         self.j,self.i,self.pointer = None,None,None
 
     #------------------------------- (iter) ---------------------------------------------------------------#
@@ -102,38 +103,35 @@ class BBIndexSlice():
         #return (self.v[j][binaryLower(self.i[j],index)] for j in range(self.n-1),)+(self.v[index],)
 
 
-    def index(self,value):
+    def _index_(self,value):
         i0,i1,n = self.i0,self.i1,len(self.pointer.i)
         for (j,v) in zip(range(self.j,n),value):
             i = binaryIndex(self.pointer.v[j],v,i0,i1)
             if i == None: raise BBIndexError(f"[{v}] not found in index ({j})")
-            if j+1 == n:
-                i0,i1 = self.pointer.i[j][i],self.pointer.i[j][i+1]
-            else:
-                i0 = binaryLower(self.pointer.i[j+1],self.pointer.i[j][i])
-                i1 = binaryUpper(self.pointer.i[j+1],self.pointer.i[j][i+1])
+            i0,i1  = self.pointer.i[j][i],self.pointer.i[j][i+1]
+            if j+1 < n:
+                i0,i1 = binaryLower(self.pointer.i[j+1],i0),binaryLower(self.pointer.i[j+1],i1)
         return binaryIndex(self.pointer.v[-1],value[-1],i0,i1)
 
-    def slice(self,value):
+    def _slice_(self,value):
+        #print(f"{self.__class__.__name__}.slice({value})")
         i0,i1,n = self.i0,self.i1,len(self.pointer.i)
         for (j,v) in zip(range(self.j,n),value):
             i = binaryIndex(self.pointer.v[j],v,i0,i1)
             if i == None: raise BBIndexError(f"[{v}] not found in index ({j})")
-            if j+1 == n:
-                i0,i1 = self.pointer.i[j][i],self.pointer.i[j][i+1]
-            else:
-                i0 = binaryLower(self.pointer.i[j+1],self.pointer.i[j][i])
-                i1 = binaryUpper(self.pointer.i[j+1],self.pointer.i[j][i+1])
-        return self.pointer._new_slice(j,i0,i1)
+            i0,i1 = self.pointer.i[j][i],self.pointer.i[j][i+1]
+            if j+1 < n:
+                i0,i1 = binaryLower(self.pointer.i[j+1],i0),binaryLower(self.pointer.i[j+1],i1)
+        return self.pointer._new_slice(j+1,i0,i1)
 
     def __getitem__(self,x):
         if type(x)==slice:
             raise IndexError(f"BBIndex slice handling not implemented {x}")
         if type(x)==tuple:
             if len(x)==self.n:
-                return self.index(x)
+                return self._index_(x)
             if len(x)< self.n:
-                return self.slice(x)
+                return self._slice_(x)
             raise IndexError(f"requested value {x} out of bounds")
 
         i = binaryIndex(self.pointer.v[self.j],x,self.i0,self.i1)
@@ -142,7 +140,7 @@ class BBIndexSlice():
             return i
         i0,i1 = self.pointer.i[self.j][i],self.pointer.i[self.j][i+1]
         if len(self.pointer.i)-self.j>1:
-            i0,i1 = binaryLower(self.pointer.i[self.j+1],i0),binaryUpper(self.pointer.i[self.j+1],i1)
+            i0,i1 = binaryLower(self.pointer.i[self.j+1],i0),binaryLower(self.pointer.i[self.j+1],i1)
         return self.pointer._new_slice(self.j+1,i0,i1)
 
     #------------------------------- (convert) ---------------------------------------------------------------#

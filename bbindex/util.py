@@ -3,18 +3,6 @@
 class BBIndexError(Exception):
     pass
 
-class BBIndexCreationError(BBIndexError):
-    pass
-
-class BBIndexTODOError(BBIndexError):
-    pass
-
-class BBIndexTypeError(BBIndexError):
-    pass
-
-class BBIndexOperationError(BBIndexError):
-    pass
-
 
 def isiterable(a):
     if type(a)==str:

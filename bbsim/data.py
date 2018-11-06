@@ -1,7 +1,7 @@
 
 import xml.etree.ElementTree as etree
 import progress
-import bbindex
+from bbindex.core import BBIndex
 
 class seasonlib():
     def __init__(self,xmlfile):
@@ -27,7 +27,7 @@ class seasonlib():
 
     @property
     def yearIndex(self):
-        return bbindex.BBIndex(('u2',),[[s.year for s in self.seasons]])
+        return BBIndex(('u2',),[[s.year for s in self.seasons]],ids=['year'])
 
     @property
     def pid(self):
@@ -35,8 +35,8 @@ class seasonlib():
 
     @property
     def pidIndex(self):
-        data = [a for b in [s.pid for s in self.seasons] for a in b]
-        return bbindex.BBIndex(('u2','U1','U3','U8'),data,ids=['year','league','team','pid'])
+        data = [list(x) for x in zip(*(a for b in [s.pid for s in self.seasons] for a in b))]
+        return BBIndex(('u2','U1','U3','U8'),data,ids=['year','league','team','pid'])
 
     @property
     def ppid(self):
@@ -44,8 +44,8 @@ class seasonlib():
 
     @property
     def ppidIndex(self):
-        data = [a for b in [s.ppid for s in self.seasons] for a in b]
-        return bbindex.BBIndex(('u2','U1','U3','U8'),data,ids=['year','league','team','pid'])
+        data = [list(x) for x in zip(*(a for b in [s.ppid for s in self.seasons] for a in b))]
+        return BBIndex(('u2','U1','U3','U8'),data,ids=['year','league','team','pid'])
 
     @property
     def gid(self):
@@ -54,7 +54,7 @@ class seasonlib():
     @property
     def gidIndex(self):
         data = [a for b in [s.gid for s in self.seasons] for a in b]
-        return bbindex.BBIndex(('U15'),[data],ids=['gid'])
+        return BBIndex(('U15'),[data],ids=['gid'])
 
     @property
     def gid_team(self):
@@ -62,16 +62,16 @@ class seasonlib():
 
     @property
     def gidTeamIndex(self):
-        data = [a for b in [i for j in [[[(g,0),(g,1)] for g in s.gid] for s in self.seasons] for i in j] for a in b]
-        return bbindex.BBIndex(('U15','u1'),data,ids=['gid','team'])
+        data = [list(x) for x in zip(*(a for b in [i for j in [[[(g,0),(g,1)] for g in s.gid] for s in self.seasons] for i in j] for a in b))]
+        return BBIndex(('U15','u1'),data,ids=['gid','team'])
 
 
     def run(self,sim):
-        bars = progress.MultiBar(2,len(self))
+        bars = progress.MultiBar(2,len(self),prefix=sim._prefix_)
         for gd in self:
             sim.initYear(gd.year)
             with gd:
-                for g in bars.iter(gd,'(%i)'%gd.year):
+                for g in bars.iter(gd,str(gd.year)):
                     sim._simGame(g,gd.gamectx())
 
 

@@ -1,5 +1,5 @@
-
-import arrpy
+import numpy as np
+from arrpy.inx import SeqIndex
 from .core import GameSim,GameSimError
 #from .stats import RosterStatSim,SeasonStatSim
 
@@ -13,26 +13,34 @@ _gameinfo
 
 """
 class GameStatSim(GameSim):
-    dcols = ['R','UR','TUR','PA','AB','S','D','T','HR','BB','IBB','HBP','K','I','SH','SF','RBI','GDP','SB','CS','PO','WP','PB','BK','P','A','E']
+    _prefix_ = 'Team Stat'
+    dcols = SeqIndex(['R','UR','TUR','PA','AB','S','D','T','HR','BB','IBB','HBP','K','I','SH','SF','RBI','GDP','SB','CS','PO','WP','PB','BK','P','A','E'])
     def __init__(self,matrix,**kwargs):
         super().__init__(**kwargs)
+        self._data = np.zeros((2,len(self.dcols)),dtype=np.dtype('u2'))
         self.matrix = matrix
-        self.ginx = None
+        #self.ginx = None
 
     #------------------------------- (Sim)[Back-End] -------------------------------#
 
     def _gameinfo(self,gameid,*info):
-        self.ginx = self.matrix.inx[gameid]
+        #self.ginx = self.matrix.inx[gameid]
         super()._gameinfo(gameid,*info)
 
     def _clear(self):
-        self.ginx = None
+        i = self.matrix.inx[self.gameid]
+        self.matrix.data[i.slice] = self._data
+        #self.ginx = None
+        self._data.fill(0)
         super()._clear()
 
     #------------------------------- [stat] -------------------------------#
 
     def _stat(self,t,stat,inc=1):
-        self.matrix[self.ginx[t],stat]+=inc
+        j = self.dcols[stat]
+        self._data[t,j] += inc
+        #i,j = self.ginx[t],self.matrix.cols[stat]
+        #self.matrix[i,j]+=inc
 
     #------------------------------- [stats] -------------------------------#
 
@@ -107,7 +115,8 @@ frameIndex(years)
 """
 
 class ScoreSim(GameSim):
-    dcols = ['a','h']
+    _prefix_ = 'Scores'
+    dcols = SeqIndex(['a','h'])
 
     def __init__(self,matrix,**kwargs):
         super().__init__(**kwargs)
