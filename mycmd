@@ -7,29 +7,85 @@ sys.path.append('/Users/luciancooper/projects/pymodule')
 
 from bbmatrix.core import BBMatrix
 from bbsim.data import seasonlib
-from bbsim.league import LeagueStatSim
-from bbsim.games import ScoreSim,GameStatSim
-from bbsim.roster import PIDStatSim,PPIDStatSim
+from bbsim.woba import REMSim
+from bbsim.league import SeasonStatSim
+from bbsim.games import ScoreSim,GameStatSim,RunsPerOutSim,RunsPerPASim
+from bbsim.roster import FposOutSim,PIDStatSim,PPIDStatSim
+
+
 
 
 #print("Lucian's Command")
 
+def bb_rpo():
+    data = seasonlib('bbdata.xml')
+    matrix = BBMatrix(data.yearIndex,RunsPerOutSim.dcols,dtype=RunsPerOutSim.dtype)
+    sim = RunsPerOutSim(matrix)
+    data.run(sim)
+    if not sys.stdout.isatty():
+        matrix.to_csv(sys.stdout)
+        return
+
+def bb_pos():
+    data = seasonlib('bbdata.xml')
+    matrix = BBMatrix(data.pidIndex,FposOutSim.dcols,dtype=FposOutSim.dtype)
+    sim = FposOutSim(matrix)
+    data.run(sim)
+    if not sys.stdout.isatty():
+        matrix.to_csv(sys.stdout)
+        return
+
+def bb_rpa():
+    data = seasonlib('bbdata.xml')
+    matrix = BBMatrix(data.yearIndex,RunsPerPASim.dcols,dtype=RunsPerPASim.dtype)
+    sim = RunsPerPASim(matrix)
+    data.run(sim)
+    if not sys.stdout.isatty():
+        matrix.to_csv(sys.stdout)
+        return
+
+def bb_rem():
+    data = seasonlib('bbdata.xml')
+    matrix = BBMatrix(data.yearIndex,REMSim.dcols,dtype=REMSim.dtype)
+    sim = REMSim(matrix)
+    data.run(sim)
+    if not sys.stdout.isatty():
+        matrix.to_csv(sys.stdout)
+        return
+
+
+def bbstat_mlb():
+    data = seasonlib('bbdata.xml')
+    matrix = BBMatrix(data.yearIndex,SeasonStatSim.dcols,dtype=SeasonStatSim.dtype)
+    sim = SeasonStatSim(matrix)
+    data.run(sim)
+    if not sys.stdout.isatty():
+        matrix.to_csv(sys.stdout)
+        return
+
+def bbstat_league():
+    data = seasonlib('bbdata.xml')
+    matrix = BBMatrix(data.leagueIndex,SeasonStatSim.dcols,dtype=SeasonStatSim.dtype)
+    sim = SeasonStatSim(matrix)
+    data.run(sim)
+    if not sys.stdout.isatty():
+        matrix.to_csv(sys.stdout)
+        return
+
+
 if __name__=='__main__':
-    print("sys.stdout",type(sys.stdout),type(sys.stdout)==io.TextIOWrapper)
-    print("sys.stderr",type(sys.stderr),type(sys.stderr)==io.TextIOWrapper)
+    #bb_rpo()
+    #bb_pos()
+    #bb_rpa()
+    #bb_rem()
+    #bbstat_mlb()
+    bbstat_league()
 
 
 # bbstat-mlb
 
 
-def bbstat_mlb():
-    data = seasonlib('bbdata.xml')
-    matrix = BBMatrix(data.yearIndex,LeagueStatSim.dcols,dtype=LeagueStatSim.dtype)
-    sim = LeagueStatSim(matrix)
-    data.run(sim)
-    if not sys.stdout.isatty():
-        matrix.to_csv(sys.stdout)
-        return
+
 
 
 

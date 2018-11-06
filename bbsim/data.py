@@ -30,6 +30,11 @@ class seasonlib():
         return BBIndex(('u2',),[[s.year for s in self.seasons]],ids=['year'])
 
     @property
+    def leagueIndex(self):
+        data = [[a for b in [[s.year]*2 for s in self.seasons] for a in b],['A','N']*len(self.seasons)]
+        return BBIndex(('u2','U1'),data,ids=['year','league'])
+
+    @property
     def pid(self):
         return [a for b in [s.pid for s in self.seasons] for a in b]
 
@@ -72,7 +77,8 @@ class seasonlib():
             sim.initYear(gd.year)
             with gd:
                 for g in bars.iter(gd,str(gd.year)):
-                    sim._simGame(g,gd.gamectx())
+                    sim.simGame(g,gd.gamectx())
+            sim.endYear()
 
 
 class seasondata():

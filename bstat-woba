@@ -10,7 +10,7 @@ from bbmatrix.core import BBMatrix
 from bbsim.data import seasonlib
 from bbsim.league import REMSim,wOBAWeightSim,LeagueStatSim
 
-LW_STAT = ['BB','HBP','S','D','T','HR']
+
 
 def calc_OBP(df):
     # OBP = (S+D+T+HR+BB+HBP)/(AB+BB+HBP+SF)
@@ -28,7 +28,7 @@ def simREM(data,inx):
 
 def simMLB(data,inx):
     matrix = BBMatrix(inx,LeagueStatSim.dcols,dtype=LeagueStatSim.dtype)
-    sim = LeagueStatSim(matrix)
+    sim = SeasonStatSim(matrix)
     #print('Simulating MLB',file=sys.stderr)
     data.run(sim)
     return matrix
@@ -41,6 +41,8 @@ def simOBA(data,inx,rem):
     return matrix
 
 
+LW_STAT = ['BB','HBP','S','D','T','HR']
+
 def main():
     data = seasonlib('bbdata.xml')
     inx = data.yearIndex
@@ -50,11 +52,10 @@ def main():
     df_oba = oba.df()
     df_mlb = mlb.df()
 
-    lw = df_oba[['O','E','K']].sum(axis=1).rename('O')
-    lw = pd.concat([sum([df_oba[x] for x in ['O','E','K']]).rename('O'),df_oba[['BB','IBB','HBP','I','S','D','T','HR']]],axis=1).applymap(float)
+    adj_lw = pd.concat([(df_oba[x]-df_oba['O']).rename(x) for x in LW_STAT],axis=1)
 
-    lw = pd.concat([sum([df_oba[x] for x in ['O','E','K']]).rename('O'),df_oba[['BB','IBB','HBP','I','S','D','T','HR']]],axis=1).applymap(float)
-    adj_lw = pd.concat([(lw[x]-lw['O']).rename(x) for x in LW_STAT],axis=1)
+    #lw = pd.concat([sum([df_oba[x] for x in ['O','E','K']]).rename('O'),df_oba[['BB','IBB','HBP','I','S','D','T','HR']]],axis=1).applymap(float)
+    #adj_lw = pd.concat([(lw[x]-lw['O']).rename(x) for x in LW_STAT],axis=1)
     OBP = calc_OBP(df_mlb)
     wOBA = ((df_mlb[LW_STAT]*adj_lw[LW_STAT]).sum(axis=1)/df_mlb[['AB','BB','SF','HBP']].sum(axis=1)).rename('wOBA')
     wOBAScale = (OBP/wOBA).rename('wOBAScale')

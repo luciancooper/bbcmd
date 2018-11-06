@@ -194,7 +194,7 @@ class BBMultiMatrix(BBMatrix):
     def calc_data(self):
         return self._div_data(*self.data)
 
-    def to_dataframe(self,index=True,**args):
+    def df(self,index=True,**args):
         df = pd.DataFrame(self.calc_data(),index=self.inx.to_pandas(),columns=self.cols.to_pandas())
         if index==False:
             df.reset_index(inplace=True)

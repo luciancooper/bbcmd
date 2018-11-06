@@ -89,6 +89,8 @@ class GameSim():
         # Safe - if context is checked for simulation Sync
         self.safe = safe
         self.report = report
+        # Year
+        self.year = None
         # Game ID YYYYMMDDHHHAAAG [Y=year,M=month,D=day,H=hometeam,A=awayteam,G=game number (always 0 unless double header)]
         self.gameid = None
         # Teams
@@ -120,18 +122,21 @@ class GameSim():
     def df(self):
         return self.frame.to_dataframe()
 
-    #------------------------------- [sim](Year) -------------------------------#
+    #------------------------------- [cycle](Year) -------------------------------#
 
     def initYear(self,year):
-        pass
+        self.year = year
+
+    def endYear(self):
+        self.year = None
 
     #------------------------------- [simgame] -------------------------------#
 
     # Reads the preformatted gamedata file and simulates the next game
-    def _simGame(self,gl,cl):
+    def simGame(self,gl,cl):
         i,ginfo = next(gl)
         i,lineup = next(gl)
-        self._gameinfo(*ginfo)
+        self._initGame(*ginfo)
         self._lineup(lineup)
         for i,l in gl:
             if i=='E':
@@ -141,15 +146,24 @@ class GameSim():
             elif i=='O':
                 self._boot(l)
         self._final(l)
-        self._clear()
+        self._endGame()
 
-    def _gameinfo(self,gameid,dh,htbf,site,hlg,alg):
+    #------------------------------- [cycle](Game) -------------------------------#
+
+    def _initGame(self,gameid,dh,htbf,site,hlg,alg):
         self.gameid = gameid
         self.teams = (gameid[11:14],gameid[8:11])
         self.leagues = (alg,hlg)
         self.useDH = int(dh)
         self.t = int(htbf)
         self.site = site
+
+    def _endGame(self):
+        '''Clears the simulator in preparation for next game'''
+        self.gameid,self.site,self.teams,self.leagues = None,None,None,None
+        self.bflg = 0
+        self.i,self.t,self.o=0,0,0
+        self.score,self.lob = [0,0],[0,0]
 
     #------------------------------- [Properties] -------------------------------#
 
@@ -169,13 +183,6 @@ class GameSim():
             if flag & 1:
                 yield i
             flag,i = flag>>1,i+1
-
-    def _clear(self):
-        '''Clears the simulator in preparation for next game'''
-        self.gameid,self.site,self.teams,self.leagues = None,None,None,None
-        self.bflg = 0
-        self.i,self.t,self.o=0,0,0
-        self.score,self.lob = [0,0],[0,0]
 
     #------------------------------- [Sim Action] -------------------------------#
 
@@ -308,8 +315,8 @@ class RosterSim(GameSim):
         self.bootlog = kwargs['bootlog'] if 'bootlog' in kwargs else None
 
     # Clears the simulator in preparation for next game
-    def _clear(self):
-        super()._clear()
+    def _endGame(self):
+        super()._endGame()
         self.base[:] = None,None,None
         self.lpos[0][:],self.lpos[1][:]=[None]*9,[None]*9
         self.fpos[0][:],self.fpos[1][:]=[None]*10,[None]*10
