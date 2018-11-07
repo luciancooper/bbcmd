@@ -1,25 +1,22 @@
 
 from arrpy.inx import SeqIndex
-from .core import RosterSim,GameSimError
+from .core import StatSim,RosterSim,BBSimError
 
 ###########################################################################################################
 #                                         RosterStatSim                                                   #
 ###########################################################################################################
 
-#frameIndex(years)
+class RosterStatSim(StatSim,RosterSim):
 
-class RosterStatSim(RosterSim):
-
-    def __init__(self,matrix,**kwargs):
-        super().__init__(**kwargs)
-        self.matrix = matrix
+    def __init__(self,index,**kwargs):
+        super().__init__(index,**kwargs)
         self.yinx = None
         self.tinx = None
 
     #------------------------------- [sim](Year) -------------------------------#
 
     def initYear(self,year):
-        self.yinx = self.matrix.inx[year]
+        self.yinx = self.index[year]
         super().initYear(year)
 
     def endYear(self):
@@ -42,13 +39,14 @@ class RosterStatSim(RosterSim):
     def _stat(self,t,pid,stat,inc=1):
         #print(f"away [{self.awayleague},{self.awayteam}] home [{self.homeleague},{self.hometeam}]")
         j = self.dcols[stat]
-        self.matrix[self.tinx[t][pid],j] += inc
-
+        i = self.tinx[t][pid]
+        self.matrix[i,j] += inc
 
     def _stats(self,t,pid,stats,inc=1):
+        i = self.tinx[t][pid]
         for stat in stats:
             j = self.dcols[stat]
-            self.matrix[self.tinx[t][pid],j] += inc
+            self.matrix[i,j] += inc
 
 
 ###########################################################################################################

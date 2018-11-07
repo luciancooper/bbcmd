@@ -6,7 +6,6 @@ import arrpy
 import numpy as np
 import pandas as pd
 
-from bbmatrix.core import BBMatrix
 from bbsim.data import seasonlib
 from bbsim.league import REMSim,wOBAWeightSim,LeagueStatSim
 
@@ -20,25 +19,19 @@ def calc_OBP(df):
 
 
 def simREM(data,inx):
-    matrix = BBMatrix(inx,REMSim.dcols,dtype=REMSim.dtype)
-    sim = REMSim(matrix)
-    #print('Simulating REM',file=sys.stderr)
+    sim = REMSim(inx)
     data.run(sim)
-    return matrix
+    return sim
 
 def simMLB(data,inx):
-    matrix = BBMatrix(inx,LeagueStatSim.dcols,dtype=LeagueStatSim.dtype)
-    sim = SeasonStatSim(matrix)
-    #print('Simulating MLB',file=sys.stderr)
+    sim = SeasonStatSim(inx)
     data.run(sim)
-    return matrix
+    return sim
 
 def simOBA(data,inx,rem):
-    matrix = BBMatrix(inx,wOBAWeightSim.dcols,dtype=wOBAWeightSim.dtype)
-    sim = wOBAWeightSim(rem,matrix)
-    #print('Simulating wOBA',file=sys.stderr)
+    sim = wOBAWeightSim(inx,rem)
     data.run(sim)
-    return matrix
+    return sim
 
 
 LW_STAT = ['BB','HBP','S','D','T','HR']
@@ -51,7 +44,7 @@ def main():
     mlb = simMLB(data,inx)
     df_oba = oba.df()
     df_mlb = mlb.df()
-
+    
     adj_lw = pd.concat([(df_oba[x]-df_oba['O']).rename(x) for x in LW_STAT],axis=1)
 
     #lw = pd.concat([sum([df_oba[x] for x in ['O','E','K']]).rename('O'),df_oba[['BB','IBB','HBP','I','S','D','T','HR']]],axis=1).applymap(float)

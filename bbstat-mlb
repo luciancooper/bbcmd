@@ -3,18 +3,15 @@
 import sys
 sys.path.append('/Users/luciancooper/projects/pymodule')
 
-from bbmatrix.core import BBMatrix
 from bbsim.data import seasonlib
 from bbsim.league import LeagueStatSim
 
 def main():
-    print('Simulating MLB',file=sys.stderr)
     data = seasonlib('bbdata.xml')
-    matrix = BBMatrix(data.yearIndex,LeagueStatSim.dcols,dtype=LeagueStatSim.dtype)
-    sim = LeagueStatSim(matrix)
+    sim = LeagueStatSim(data.yearIndex)
     data.run(sim)
     if not sys.stdout.isatty():
-        matrix.to_csv(sys.stdout)
+        sim.to_csv(sys.stdout)
         return
 
 if __name__=='__main__':

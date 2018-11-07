@@ -4,8 +4,9 @@
 import pyutil
 from pyutil.core import zipmap
 import arrpy
+from bbmatrix.core import BBMatrix
 #import bbsrc
-from .frame import StatFrame
+
 
 # NOSIMLIST --> 20070926SEACLE1
 
@@ -32,7 +33,7 @@ from .frame import StatFrame
 # (1) [22] T - Triple
 # (1) [23] HR - Home run
 
-class GameSimError(Exception):
+class BBSimError(Exception):
     def __init__(self,gid,*lines):
         super().__init__('[%s]%s'%(gid,''.join('\n'+str(x) for x in lines)))
 
@@ -50,6 +51,7 @@ class GameSimError(Exception):
 class GameSim():
 
     _prefix_ = ''
+
 
     AB = { 'O':1,'E':1,'SH':0,'SF':0,'I':0,'K':1,'BB':0,'IBB':0,'HBP':0,'S':1,'D':1,'T':1,'HR':1 }
     E_STR = ('O','E','K','BB','IBB','HBP','I','S','D','T','HR','WP','PB','DI','OA','RUNEVT','BK','FLE')
@@ -113,11 +115,6 @@ class GameSim():
         self.lib=None
 
     #------------------------------- (Sim)[frame] -------------------------------#
-    dtype = 'u2'
-
-    def setFrame(self,frame):
-        self.frame=frame
-        return self
 
     def df(self):
         return self.frame.to_dataframe()
@@ -166,15 +163,6 @@ class GameSim():
         self.score,self.lob = [0,0],[0,0]
 
     #------------------------------- [Properties] -------------------------------#
-
-    @staticmethod
-    def enumerate_bitflag(flag,span):
-        """like the built in enumerate(), but for binary flags"""
-        i,mask=0,(1<<span)-1
-        while (flag!=0):
-            bit,flag = flag&mask,flag>>span
-            yield (i,bit)
-            i+=1
 
     @staticmethod
     def _bitindexes(flag):
@@ -286,11 +274,55 @@ class GameSim():
         self._advance(*l[self.EVENT['adv']])
         if self.o==3:self._cycle_inning()
 
+
     #------------------------------- [str] -------------------------------#
 
     @property
     def _str_ctx_(self):
         return '(%i|%i|%i)'%(self.inning,self.t,self.o)
+
+
+
+###########################################################################################################
+#                                             RosterSim                                                   #
+###########################################################################################################
+
+class StatSim(GameSim):
+
+    dtype = 'u2'
+
+    def __init__(self,index,**kwargs):
+        super().__init__(**kwargs)
+        self.index = index
+        m,n = len(index),len(self.dcols)
+        self.matrix = BBMatrix((m,n),dtype=self.dtype)
+
+
+    #------------------------------- [pandas] -------------------------------#
+
+    def df(self,index=True,**args):
+        df = pd.DataFrame(self.matrix.np(),index=self.index.to_pandas(),columns=self.dcols.to_pandas())
+        if index==False:
+            df.reset_index(inplace=True)
+        return df
+
+    #------------------------------- [csv] -------------------------------#
+
+    def to_csv(self,file):
+        if type(file)==str:
+            with open(file,'w') as f:
+                for l in self._iter_csv():
+                    print(l,file=f)
+        else:
+            for l in self._iter_csv():
+                print(l,file=file)
+
+
+    def _iter_csv(self):
+        yield '%s,%s'%(','.join(str(x) for x in self.index.ids),','.join(str(x) for x in self.dcols))
+        for inx,data in zip(self.index,self.matrix):
+            yield '%s,%s'%(','.join(str(x) for x in inx),','.join(str(x) for x in data))
+
 
 
 ###########################################################################################################
@@ -397,11 +429,11 @@ class RosterSim(GameSim):
                     for i,b in zipmap(self._bitindexes(self.bflg),self.base):
                         if b[0]==runner: break
                     else:
-                        raise GameSimError(self.gameid,self._str_ctx_,'pinchrun error [%s] not on base'%runner)
+                        raise BBSimError(self.gameid,self._str_ctx_,'pinchrun error [%s] not on base'%runner)
                     self.base[i] = (pid,self.base[i][1])
                 else:
                     if self._lpos_!=lpos:
-                        raise GameSimError(self.gameid,self._str_ctx_,'Pinchit Discrepancy _lpos_[{}] lpos[{}]'.format(self._lpos_,lpos))
+                        raise BBSimError(self.gameid,self._str_ctx_,'Pinchit Discrepancy _lpos_[{}] lpos[{}]'.format(self._lpos_,lpos))
                     if count!='' and count[1]=='2':
                         self.rpid[1] = self._bpid_
                 self.fpos[t][self.lpos[t][lpos]] = pid
@@ -409,7 +441,7 @@ class RosterSim(GameSim):
                 if (lpos>=0):self.lpos[t][lpos] = fpos
                 self.fpos[t][fpos] = pid
         else:
-            if fpos>9:raise GameSimError(self.gameid,self._str_ctx_,'defensive pinch sub [%i]'%fpos)
+            if fpos>9:raise BBSimError(self.gameid,self._str_ctx_,'defensive pinch sub [%i]'%fpos)
             if (lpos>=0):self.lpos[t][lpos] = fpos
             if fpos==0 and count in ['20','21','30','31','32']:
                 self.rpid[0] = self._ppid_
@@ -474,17 +506,17 @@ class RosterSim(GameSim):
         bpid,ppid = ctx[self.CTX['bpid']],ctx[self.CTX['ppid']]
         lpos,fpos = (int(x) for x in ctx[self.CTX['pos']])
         if rbpid!=ctx[self.CTX['rbpid']]:
-            raise GameSimError(self.gameid,self._str_ctx_,'rbpid sim[%s] evt[%s]'%(rbpid,ctx[self.CTX['rbpid']]))
+            raise BBSimError(self.gameid,self._str_ctx_,'rbpid sim[%s] evt[%s]'%(rbpid,ctx[self.CTX['rbpid']]))
         if rppid!=ctx[self.CTX['rppid']]:
-            raise GameSimError(self.gameid,self._str_ctx_,'rppid sim[%s] evt[%s]'%(rppid,ctx[self.CTX['rppid']]))
+            raise BBSimError(self.gameid,self._str_ctx_,'rppid sim[%s] evt[%s]'%(rppid,ctx[self.CTX['rppid']]))
         if self._ppid_!=ppid:
-            raise GameSimError(self.gameid,self._str_ctx_,'ppid sim[%s] evt[%s]'%(self._ppid_,ppid))
+            raise BBSimError(self.gameid,self._str_ctx_,'ppid sim[%s] evt[%s]'%(self._ppid_,ppid))
         if self._bpid_!=bpid:
-            raise GameSimError(self.gameid,self._str_ctx_,'bpid sim[%i|%s] evt[%i|%s] %s'%(self._lpos_,self._bpid_,lpos,bpid,ctx[self.CTX['eid']]))
+            raise BBSimError(self.gameid,self._str_ctx_,'bpid sim[%i|%s] evt[%i|%s] %s'%(self._lpos_,self._bpid_,lpos,bpid,ctx[self.CTX['eid']]))
         if self._lpos_!=lpos:
-            raise GameSimError(self.gameid,self._str_ctx_,'lpos sim[%i|%s] evt[%i|%s] %s'%(self._lpos_,self._bpid_,lpos,bpid,ctx[self.CTX['eid']]))
+            raise BBSimError(self.gameid,self._str_ctx_,'lpos sim[%i|%s] evt[%i|%s] %s'%(self._lpos_,self._bpid_,lpos,bpid,ctx[self.CTX['eid']]))
         if fpos!=0 and fpos!=11 and self._bpid_fpos_!=fpos-1:
-            raise GameSimError(self.gameid,self._str_ctx_,'fpos sim[%s] evt[%s] %s'%(self._bpid_fpos_,fpos-1,ctx[self.CTX['eid']]))
+            raise BBSimError(self.gameid,self._str_ctx_,'fpos sim[%s] evt[%s] %s'%(self._bpid_fpos_,fpos-1,ctx[self.CTX['eid']]))
 
     #------------------------------- [str] -------------------------------#
 

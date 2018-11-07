@@ -33,93 +33,78 @@ class BBMatrixIndexer():
 
 class BBMatrix():
 
-    __slots__ = ['inx','cols','data']
+    __slots__ = ['n','m','data']
 
-    def __new__(cls,inx,cols,dtype='u2'):
-        c = cols if isinstance(cols,arrpy.inx.Index) else arrpy.SeqIndex(cols)
-        shape = (len(inx),len(c))
+    def __new__(cls,shape,dtype='u2'):
         if type(dtype)==tuple or type(dtype)==list:
             data = [np.zeros(shape,dtype=np.dtype(dt)) for dt in dtype]
-            return cls._new_inst(BBMultiMatrix,inx,c,data)
+            return cls._new_inst(BBMultiMatrix,shape,data)
         else:
             data = np.zeros(shape,dtype=np.dtype(dtype))
-            return cls._new_inst(BBMatrix,inx,c,data)
+            return cls._new_inst(BBMatrix,shape,data)
 
     @staticmethod
-    def _new_inst(cls,inx,cols,data):
+    def _new_inst(cls,shape,data):
         inst = object.__new__(cls)
-        inst.inx = inx
-        inst.cols = cols
+        inst.m,inst.n = shape
         inst.data = data
         return inst
+
+
 
 
     #------------------------------- (garbage-collection) ---------------------------------------------------------------#
 
     def __del__(self):
-        self.inx,self.cols,self.data = None,None,None
+        self.m,self.n,self.data = None,None,None
 
     #------------------------------- [shape] -------------------------------#
 
     def __len__(self):
-        return len(self.inx)
+        return self.m
 
     @property
     def shape(self):
         return (self.m,self.n)
 
-    @property
-    def n(self):
-        return len(self.cols)
-
-    @property
-    def m(self):
-        return len(self.inx)
-
-
     #------------------------------- (access)[get/set] -------------------------------#
 
     def __getitem__(self,x):
         if type(x)!=tuple:
-            raise BBMatrixError('error on get[{}]'.format(x))
-
+            return self.data[x]
+            #raise BBMatrixError('error on get[{}]'.format(x))
         i,j = x
-        if type(j)!=int:
-            j = self.cols[j]
         return self.data[i,j]
 
 
     def __setitem__(self,x,v):
         if type(x)!=tuple:
             raise BBMatrixError('error on set[{}] = {}'.format(x,v))
-
         i,j = x
-        if type(j)!=int:
-            j = self.cols[j]
         self.data[i,j] = v
 
     #------------------------------- [slice] -------------------------------#
-
+    """
     def slice(self,i):
         inx = self.inx._subIndex(i)
         return BBMatrixSlice(inx,self)
-
+    """
     #------------------------------- (from)[pandas] -------------------------------#
 
     @classmethod
-    def from_dataframe(cls,df):
-        i = df.index.values.tolist()
-        j = df.columns.values.tolist()
-        d = df.values.tolist()
-        return cls(i,j,np.array(d))
+    def from_np(cls,arr):
+        pass
+        #return cls(i,j,np.array(d))
 
-    #------------------------------- (as)[pandas] -------------------------------#
 
-    def df(self,index=True,**args):
-        df = pd.DataFrame(self.data,index=self.inx.to_pandas(),columns=self.cols.to_pandas())
-        if index==False:
-            df.reset_index(inplace=True)
-        return df
+    def np(self):
+        return self.data
+
+    #------------------------------- [iter] -------------------------------#
+
+    def __iter__(self):
+        for x in self.data:
+            yield x
 
     #------------------------------- [csv] -------------------------------#
 
@@ -133,9 +118,8 @@ class BBMatrix():
                 print(l,file=file)
 
     def _iter_csv(self):
-        yield '%s,%s'%(','.join(str(x) for x in self.inx.ids),','.join(str(x) for x in self.cols))
-        for inx,data in zip(self.inx,self.data):
-            yield '%s,%s'%(','.join(str(x) for x in inx),','.join(str(x) for x in data))
+        for row in self:
+            yield ','.join(str(x) for x in data)
 
 
 
@@ -152,16 +136,12 @@ class BBMultiMatrix(BBMatrix):
 
     def __getitem__(self,x):
         if type(x)!=tuple:
-            raise BBMatrixError('error on get[{}]'.format(x))
+            return self._div_data(*(d[x] for x in self.data))
         if len(x) == 3:
             i,j,z = x
-            if type(j)!=int:
-                j = self.cols[j]
             return self.data[z][i,j]
         else:
             i,j = x
-            if type(j)!=int:
-                j = self.cols[j]
             return np.array([d[i,j] for d in self.data])
 
 
@@ -171,14 +151,10 @@ class BBMultiMatrix(BBMatrix):
             raise BBMatrixError('error on set[{}] = {}'.format(x,value))
         if len(x) == 3:
             i,j,z = x
-            if type(j)!=int:
-                j = self.cols[j]
             self.data[z][i,j] = value
         else:
             #print(f"{self.__class__.__name__}.set[{x}] = {value}")
             i,j = x
-            if type(j)!=int:
-                j = self.cols[j]
             for z,v in enumerate(value):
                 self.data[z][i,j] = v
 
@@ -191,18 +167,12 @@ class BBMultiMatrix(BBMatrix):
 
     #------------------------------- (as)[pandas] -------------------------------#
 
-    def calc_data(self):
+    def np(self):
         return self._div_data(*self.data)
 
-    def df(self,index=True,**args):
-        df = pd.DataFrame(self.calc_data(),index=self.inx.to_pandas(),columns=self.cols.to_pandas())
-        if index==False:
-            df.reset_index(inplace=True)
-        return df
 
-    #------------------------------- [csv] -------------------------------#
+    #------------------------------- [iter] -------------------------------#
 
-    def _iter_csv(self):
-        yield '%s,%s'%(','.join(str(x) for x in self.inx.ids),','.join(str(x) for x in self.cols))
-        for inx,data in zip(self.inx,self.calc_data()):
-            yield '%s,%s'%(','.join(str(x) for x in inx),','.join(str(x) for x in data))
+    def __iter__(self):
+        for x in self._div_data(*self.data):
+            yield x

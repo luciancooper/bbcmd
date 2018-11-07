@@ -1,28 +1,28 @@
 import numpy as np
 from arrpy.inx import SeqIndex
-from .core import GameSim,GameSimError
+from .core import StatSim,BBSimError
+from bbmatrix.core import BBMatrix
 #from .stats import RosterStatSim,SeasonStatSim
 
 ###########################################################################################################
 #                                          GameStatSim                                                    #
 ###########################################################################################################
-"""
-frameIndex(years)
-"""
-class GameStatSim(GameSim):
+
+class GameStatSim(StatSim):
     _prefix_ = 'Team Stat'
     dcols = SeqIndex(['R','UR','TUR','PA','AB','S','D','T','HR','BB','IBB','HBP','K','I','SH','SF','RBI','GDP','SB','CS','PO','WP','PB','BK','P','A','E'])
-    def __init__(self,matrix,**kwargs):
-        super().__init__(**kwargs)
-        self.matrix = matrix
-        self._data = np.zeros((2,len(self.dcols)),dtype=matrix.data.dtype)
-        #self.ginx = None
+
+    def __init__(self,index,**kwargs):
+        super().__init__(index,**kwargs)
+        self._data = np.zeros((2,len(self.dcols)),dtype=np.dtype(self.dtype))
 
     #------------------------------- (Sim)[Back-End] -------------------------------#
 
     def _endGame(self):
-        i = self.matrix.inx[self.gameid]
+        i = self.index[self.gameid]
         self.matrix.data[i.startIndex:i.endIndex] = self._data
+        #i = self.matrix.inx[self.gameid]
+        #self.matrix.data[i.startIndex:i.endIndex] = self._data
         self._data.fill(0)
         super()._endGame()
 
@@ -100,24 +100,16 @@ class GameStatSim(GameSim):
 ###########################################################################################################
 #                                            ScoreSim                                                     #
 ###########################################################################################################
-"""
-frameIndex(years)
-"""
 
-class ScoreSim(GameSim):
+class ScoreSim(StatSim):
     _prefix_ = 'Scores'
     dcols = SeqIndex(['a','h'])
-
-    def __init__(self,matrix,**kwargs):
-        super().__init__(**kwargs)
-        self.matrix = matrix
 
     #------------------------------- (Sim)[Back-End] -------------------------------#
 
     def _endGame(self):
-        i = self.matrix.inx[self.gameid]
-        self.matrix[i,0] = self.score[0]
-        self.matrix[i,1] = self.score[1]
+        i = self.index[self.gameid]
+        self.matrix[i] = self.score
         super()._endGame()
 
 
@@ -125,16 +117,15 @@ class ScoreSim(GameSim):
 #                                            RunsPerOut                                                   #
 ###########################################################################################################
 
-class RunsPerOutSim(GameSim):
+class RunsPerOutSim(StatSim):
 
     _prefix_ = 'RPO'
     dcols = SeqIndex(['R','O'])
     dtype = 'u4'
 
-    def __init__(self,matrix,**kwargs):
-        super().__init__(**kwargs)
-        self.matrix = matrix
-        self._data = np.zeros((2,),dtype=matrix.data.dtype)
+    def __init__(self,index,**kwargs):
+        super().__init__(index,**kwargs)
+        self._data = np.zeros((2,),dtype=self.matrix.data.dtype)
 
     #------------------------------- [stat] -------------------------------#
 
@@ -149,21 +140,20 @@ class RunsPerOutSim(GameSim):
     #------------------------------- [cycle](Year) -------------------------------#
 
     def endYear(self):
-        yinx = self.matrix.inx[self.year]
+        yinx = self.index[self.year]
         self.matrix.data[yinx] = self._data
         self._data.fill(0)
         super().endYear()
 
-class RunsPerPASim(GameSim):
+class RunsPerPASim(StatSim):
 
     _prefix_ = 'R/PA'
     dcols = SeqIndex(['R','PA'])
     dtype = 'u4'
 
-    def __init__(self,matrix,**kwargs):
+    def __init__(self,index,**kwargs):
         super().__init__(**kwargs)
-        self.matrix = matrix
-        self._data = np.zeros((2,),dtype=matrix.data.dtype)
+        self._data = np.zeros((self.matrix.n,),dtype=self.matrix.data.dtype)
 
     #------------------------------- [stat] -------------------------------#
 
@@ -181,7 +171,7 @@ class RunsPerPASim(GameSim):
     #------------------------------- [cycle](Year) -------------------------------#
 
     def endYear(self):
-        yinx = self.matrix.inx[self.year]
+        yinx = self.index[self.year]
         self.matrix.data[yinx] = self._data
         self._data.fill(0)
         super().endYear()

@@ -2,34 +2,34 @@
 from arrpy.inx import SeqIndex
 import numpy as np
 import pandas as pd
-from .core import GameSim,GameSimError
-from bbmatrix.rem import REMatrix
+from .core import StatSim,BBSimError
+from bbmatrix import BBMatrix,REMatrix
 
 ###########################################################################################################
 #                                           REM Sim                                                       #
 ###########################################################################################################
 
 
-class REMSim(GameSim):
+class REMSim(StatSim):
     _prefix_ = 'REM'
     dcols = [*range(24)]
     dtype = ('u2','u2')
 
-    def __init__(self,matrix,paonly=False,**kwargs):
-        super().__init__(**kwargs)
+    def __init__(self,index,paonly=False,**kwargs):
+        super().__init__(index,**kwargs)
         self._data = np.zeros((24,2),dtype=np.dtype('u2'))
         self.states = np.zeros((24,2),dtype=np.dtype('u1'))
-        self.matrix = matrix
         self.paonly = paonly
 
     #------------------------------- [cycle](Year) -------------------------------#
 
     def endYear(self):
-        yinx = self.matrix.inx[self.year]
+        yinx = self.index[self.year]
         for i in range(2):
             self.matrix.data[i][yinx] += self._data[:,i]
         self._data.fill(0)
         super().endYear()
+
     #------------------------------- [cycle](Game) -------------------------------#
 
     def _endGame(self):
@@ -69,7 +69,7 @@ class REMSim(GameSim):
 ###########################################################################################################
 
 
-class wOBAWeightSim(GameSim):
+class wOBAWeightSim(StatSim):
     _prefix_ = 'wOBA'
 
     E_STR = ('O','O','O','BB','IBB','HBP','I','S','D','T','HR','WP','PB','DI','OA','RUNEVT','BK','FLE')
@@ -77,19 +77,17 @@ class wOBAWeightSim(GameSim):
     dcols = SeqIndex(['O','SH','SF','BB','IBB','HBP','I','S','D','T','HR'])
     dtype = ('f4','u4')
     #statcode = [0,1,2,3,4,5,6,7,8,9,10] # BB(3)HBP(5)S(7)D(8)T(9)HR(10)
-    def __init__(self,rem_data,matrix,**kwargs):
-        super().__init__(**kwargs)
+    def __init__(self,index,rem_data,**kwargs):
+        super().__init__(index,**kwargs)
         self.rem_data = rem_data
         self.rem = None
-        self.matrix = matrix
         self.yinx = None
 
     #------------------------------- [sim](Year) -------------------------------#
 
     def initYear(self,year):
-        y = self.rem_data.inx[year]
-        self.rem = REMatrix(self.rem_data.data[0][y]/self.rem_data.data[1][y])
-        self.yinx = self.matrix.inx[year]
+        self.yinx = self.index[year]
+        self.rem = REMatrix(self.rem_data[self.yinx])
         super().initYear(year)
 
     def endYear(self):

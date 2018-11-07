@@ -3,18 +3,15 @@
 import sys
 sys.path.append('/Users/luciancooper/projects/pymodule')
 
-from bbmatrix.core import BBMatrix
 from bbsim.data import seasonlib
 from bbsim.roster import PPIDStatSim
 
 def main():
-    print('Simulating Game Stats',file=sys.stderr)
     data = seasonlib('bbdata.xml')
-    matrix = BBMatrix(data.ppidIndex,PPIDStatSim.dcols,dtype=PPIDStatSim.dtype)
-    sim = PPIDStatSim(matrix)
+    sim = PPIDStatSim(data.ppidIndex)
     data.run(sim)
     if not sys.stdout.isatty():
-        matrix.to_csv(sys.stdout)
+        sim.to_csv(sys.stdout)
         return
 
 if __name__=='__main__':

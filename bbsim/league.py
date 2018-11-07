@@ -3,34 +3,34 @@ import sys
 from arrpy.inx import SeqIndex
 import numpy as np
 from pyutil.core import zipmap
-from .core import GameSim,GameSimError
+from bbmatrix.core import BBMatrix
+from .core import StatSim,BBSimError
 
 ###########################################################################################################
 #                                         LeagueStatSim                                                   #
 ###########################################################################################################
 
-class SeasonStatSim(GameSim):
+class SeasonStatSim(StatSim):
     _prefix_ = 'MLB'
     dcols = SeqIndex(['PA','AB','O','E','SF','SH','K','BB','IBB','HBP','I','S','D','T','HR'])
     dtype = 'u4'
 
-    def __new__(cls,matrix,**kwargs):
+    def __new__(cls,index,**kwargs):
         print(f"SeasonStatSim.__new__({cls.__name__})",file=sys.stderr)
-        if matrix.inx.n == 2:
+        if index.n == 2:
             return super().__new__(LeagueStatSim)
         return super().__new__(cls)
 
 
-    def __init__(self,matrix,**kwargs):
+    def __init__(self,index,**kwargs):
         print(f"SeasonStatSim.__init__()",file=sys.stderr)
-        super().__init__(**kwargs)
-        self.matrix = matrix
+        super().__init__(index,**kwargs)
         self.yinx = None
 
     #------------------------------- [sim](Year) -------------------------------#
 
     def initYear(self,year):
-        self.yinx = self.matrix.inx[year]
+        self.yinx = self.index[year]
         super().initYear(year)
 
     def endYear(self):
@@ -72,6 +72,9 @@ class SeasonStatSim(GameSim):
         super()._event(l)
 
 
+
+
+
 class LeagueStatSim(SeasonStatSim):
     _prefix_ = 'LGUE'
 
@@ -79,9 +82,9 @@ class LeagueStatSim(SeasonStatSim):
         print(f"LeagueStatSim.__new__({cls.__name__})",file=sys.stderr)
         return object.__new__(cls)
 
-    def __init__(self,matrix,**kwargs):
+    def __init__(self,index,**kwargs):
         print(f"LeagueStatSim.__init__()",file=sys.stderr)
-        super().__init__(matrix,**kwargs)
+        super().__init__(index,**kwargs)
         #super(MLBStatSim,self).__init__(**kwargs)
         #self.matrix = matrix
         self._data = np.zeros((2,len(self.dcols)),dtype=np.dtype(self.dtype))
