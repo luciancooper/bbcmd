@@ -1,0 +1,157 @@
+#!/usr/bin/env python
+
+import sys
+sys.path.append('/Users/luciancooper/projects/pymodule')
+
+from bbsim.data import seasonlib
+
+VALID_CMDS = ['ppid','pid','posout','gamestat','gamescore','mlb','league','nopitcher-league','runsperout','runsperpa','woba']
+
+# arg: 'ppid'
+def run_ppid(data):
+    from bbsim.roster import PIDStatSim
+    sim = PPIDStatSim(data.ppidIndex)
+    data.run(sim)
+    return sim
+
+# arg: 'pid'
+def run_pid(data):
+    from bbsim.roster import PIDStatSim
+    sim = PIDStatSim(data.pidIndex)
+    data.run(sim)
+    return sim
+
+# arg: 'posout'
+def run_posout(data):
+    from bbsim.roster import FposOutSim
+    sim = FposOutSim(data.pidIndex)
+    data.run(sim)
+    return sim
+
+# arg: 'gamestat'
+def run_gamestat(data):
+    from bbsim.games import GameStatSim
+    sim = GameStatSim(data.gidTeamIndex)
+    data.run(sim)
+    return sim
+
+# arg: 'gamescore'
+def run_gamescore(data):
+    from bbsim.games import ScoreSim
+    sim = ScoreSim(data.gidIndex)
+    data.run(sim)
+    return sim
+
+# arg: 'mlb'
+def run_mlb(data):
+    from bbsim.league import SeasonStatSim
+    sim = SeasonStatSim(data.yearIndex)
+    data.run(sim)
+    return sim
+
+# arg: 'league'
+def run_league(data):
+    from bbsim.league import SeasonStatSim
+    sim = SeasonStatSim(data.leagueIndex)
+    data.run(sim)
+    return sim
+
+# arg: 'nopitcher-league'
+def run_npleague(data):
+    from bbsim.league import NPLeagueStatSim
+    sim = NPLeagueStatSim(data.leagueIndex)
+    data.run(sim)
+    return sim
+
+# arg: 'runsperout'
+def run_runsperout(data):
+    from bbsim.games import RunsPerOutSim
+    sim = RunsPerOutSim(data.yearIndex)
+    data.run(sim)
+    return sim
+
+# arg: 'runsperpa'
+def run_runsperpa(data):
+    from bbsim.games import RunsPerPASim
+    sim = RunsPerPASim(data.yearIndex)
+    data.run(sim)
+    return sim
+
+
+# arg: 'woba'
+def run_woba(data):
+    import numpy as np
+    import pandas as pd
+    from bbsim.woba import REMSim,wOBAWeightSim
+    from bbsim.league import SeasonStatSim
+    yIndex = data.yearIndex
+    # Sim Run Exp Matrix
+    rem = REMSim(yIndex)
+    data.run(rem)
+    # Sim wOBA linear weights
+    oba = wOBAWeightSim(yIndex,rem)
+    data.run(oba)
+    # Sim MLB Batting Stats
+    mlb = SeasonStatSim(yIndex)
+    data.run(mlb)
+    # Calculate wOBA weights
+    linear_weights = ['BB','HBP','S','D','T','HR']
+    # Calc adjusted linear weights
+    adjlw = oba.adjWeights()
+    # League OBP (On Base Percentage)
+    obp = mlb['(S+D+T+HR+BB+HBP)/(AB+BB+HBP+SF)']
+    # League wOBA
+    woba = (mlb[linear_weights]*adjlw[linear_weights].values).sum(axis=1,keepdims=True)/mlb['AB+BB+SF+HBP']
+    # wOBA Scale
+    woba_scale = obp / woba
+    # Final wOBA linear weights
+    lw = adjlw.values * woba_scale
+    # DataFrame container linear weights
+    df = pd.DataFrame(np.c_[woba,woba_scale,lw],index=yIndex.pandas(),columns=['woba','woba_Scale']+linear_weights)
+    print(df,file=sys.stderr)
+    return df
+
+
+def option_function(arg):
+    if arg == 'ppid':
+        return run_ppid
+    if arg == 'pid':
+        return run_pid
+    if arg == 'posout':
+        return run_posout
+    if arg == 'gamestat':
+        return run_gamestat
+    if arg == 'gamescore':
+        return run_gamescore
+    if arg == 'mlb':
+        return run_mlb
+    if arg == 'league':
+        return run_league
+    if arg == 'nopitcher-league':
+        return run_npleague
+    if arg == 'runsperout':
+        return run_runsperout
+    if arg == 'runsperpa':
+        return run_runsperpa
+    if arg == 'woba':
+        return run_woba
+
+def main(arg):
+    if arg.endswith('-help'):
+        print(f"use one of the following options to simulate baseball stats: {VALID_CMDS}",file=sys.stderr)
+        return
+    if arg not in VALID_CMDS:
+        print(f"'{arg}' is not a valid option choice",file=sys.stderr)
+        return
+
+    data = seasonlib('bbdata.xml')
+    fn = option_function(arg)
+    out = fn(data)
+    if not sys.stdout.isatty():
+        out.to_csv(sys.stdout)
+        return
+
+
+if __name__=='__main__':
+    arg = sys.argv[1]
+    main(arg)

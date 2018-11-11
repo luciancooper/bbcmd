@@ -4,7 +4,10 @@
 import pyutil
 from pyutil.core import zipmap
 import arrpy
+import pandas as pd
+import numpy as np
 from bbmatrix.core import BBMatrix
+from .util import evaluate_mathstring
 #import bbsrc
 
 
@@ -283,45 +286,11 @@ class GameSim():
 
 
 
-###########################################################################################################
-#                                             RosterSim                                                   #
-###########################################################################################################
-
-class StatSim(GameSim):
-
-    dtype = 'u2'
-
-    def __init__(self,index,**kwargs):
-        super().__init__(**kwargs)
-        self.index = index
-        m,n = len(index),len(self.dcols)
-        self.matrix = BBMatrix((m,n),dtype=self.dtype)
 
 
-    #------------------------------- [pandas] -------------------------------#
-
-    def df(self,index=True,**args):
-        df = pd.DataFrame(self.matrix.np(),index=self.index.to_pandas(),columns=self.dcols.to_pandas())
-        if index==False:
-            df.reset_index(inplace=True)
-        return df
-
-    #------------------------------- [csv] -------------------------------#
-
-    def to_csv(self,file):
-        if type(file)==str:
-            with open(file,'w') as f:
-                for l in self._iter_csv():
-                    print(l,file=f)
-        else:
-            for l in self._iter_csv():
-                print(l,file=file)
 
 
-    def _iter_csv(self):
-        yield '%s,%s'%(','.join(str(x) for x in self.index.ids),','.join(str(x) for x in self.dcols))
-        for inx,data in zip(self.index,self.matrix):
-            yield '%s,%s'%(','.join(str(x) for x in inx),','.join(str(x) for x in data))
+
 
 
 
@@ -367,26 +336,41 @@ class RosterSim(GameSim):
 
     #------------------------------- [Properties] -------------------------------#
 
+
     @property
     def _ppid_(self):
+        """pitcher id"""
         return self.fpos[self.t^1][0]
+
+
     @property
     def _rppid_(self):
+        """responsible pitcher id"""
         return self.rpid[0] if (self.rpid[0]!=None) else self._ppid_
     #------------------------------- [batting-order] -------------------------------#
 
+
     @property
     def _lpos_(self):
+        """lineup position of batter"""
         return self.boot[self.t][-1] if self.bootflg[self.t] else self.abinx[self.t]
+
+
     @property
     def _bpid_(self):
+        """batter id"""
         return self.fpos[self.t][self.lpos[self.t][self._lpos_]]
+
+
     @property
     def _rbpid_(self):
+        """responsible batter id"""
         return self.rpid[1] if (self.rpid[1]!=None) else self._bpid_
+
 
     @property
     def _bpid_fpos_(self):
+        """field position of batter"""
         return self.lpos[self.t][self._lpos_]
 
     @property
@@ -394,7 +378,9 @@ class RosterSim(GameSim):
         """Returns the fpos of team currently on defense"""
         return self.fpos[self.dt]
 
+
     def _boot(self,l):
+        """handles the rare case of when a team bats out of order"""
         super()._boot(l)
         self.boot[self.t] += [int(l[self.BOOT['lpos']])]
         if self.bootlog!=None:
@@ -402,13 +388,17 @@ class RosterSim(GameSim):
             self.bootlog.write('boot(%i)[%s]\n'%(self.abinx[self.t],l[self.BOOT['lpos']]))
         self.bootflg[self.t] = 1
 
+
     def _bootcycle(self):
+        """Ensures the correct player is currently batting in the event of a team batting out of order"""
         i,j = self.abinx[self.t],max(self.boot[self.t])
         if self.bootlog!=None: self.bootlog.write('bootcycle(%i)[%s] span:[%s]\n'%(self.abinx[self.t],','.join(str(x) for x in self.boot[self.t]),','.join(str(x) for x in range(i,j+1))))
         self.abinx[self.t] = (self.abinx[self.t]+(j-i+1))%9
         self.bootflg[self.t],self.boot[self.t] = 0,[]
 
+
     def _cycle_lineup(self):
+        """Cycles to the next batter"""
         if self.bootflg[self.t]:
             self.bootflg[self.t]<<=1
         else:
@@ -498,6 +488,9 @@ class RosterSim(GameSim):
         if self.o==3:
             self._cycle_inning()
 
+
+    #------------------------------- [verify] -------------------------------#
+
     def _verify(self,l,ctx):
         super()._verify(l,ctx)
         # [bpid=batter][ppid=pitcher][lpos=lineup-position][fpos=fielding-position]
@@ -525,3 +518,65 @@ class RosterSim(GameSim):
         return '[{}]'.format(b) if bracket else b
     def _str_lineup_(self,t,inx=-1):
         return ''.join([('[{},{}]' if i!=inx else '({},{})').format(x,self.fpos[t][x]) for i,x in enumerate(self.lpos[t])])
+
+
+
+
+###########################################################################################################
+#                                             RosterSim                                                   #
+###########################################################################################################
+
+class StatSim(GameSim):
+
+    dtype = 'u2'
+
+    def __init__(self,index,**kwargs):
+        super().__init__(**kwargs)
+        self.index = index
+        m,n = len(index),len(self.dcols)
+        self.matrix = BBMatrix((m,n),dtype=self.dtype)
+
+
+    #------------------------------- [pandas] -------------------------------#
+
+    def df(self,index=True,**args):
+        df = pd.DataFrame(self.matrix.np(),index=self.index.pandas(),columns=self.dcols.pandas())
+        if index==False:
+            df.reset_index(inplace=True)
+        return df
+
+    #------------------------------- [csv] -------------------------------#
+
+    def to_csv(self,file):
+        if type(file)==str:
+            with open(file,'w') as f:
+                for l in self._iter_csv():
+                    print(l,file=f)
+        else:
+            for l in self._iter_csv():
+                print(l,file=file)
+
+
+    def _iter_csv(self):
+        yield '%s,%s'%(','.join(str(x) for x in self.index.ids),','.join(str(x) for x in self.dcols))
+        for inx,data in zip(self.index,self.matrix):
+            yield '%s,%s'%(','.join(str(x) for x in inx),','.join(str(x) for x in data))
+
+
+    #------------------------------- [getter] -------------------------------#
+
+    def __getitem__(self,key):
+        if type(key) == str:
+            if key.isalpha():
+                return self.matrix.cols([self.dcols[key]])
+            return evaluate_mathstring(key,lambda v: self.matrix.cols([self.dcols[v]]))
+        if type(key) == list:
+            if all(type(x)==str for x in key):
+                return self.matrix.cols(self.dcols.mapValues(key))
+            else:
+                return self.matrix.rows(key)
+            #Retrieve Columns
+
+        if type(key) == int:
+            return self.matrix.row(key)
+        raise IndexError(f"{key} is not a valid input")

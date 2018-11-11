@@ -70,18 +70,46 @@ class BBMatrix():
     #------------------------------- (access)[get/set] -------------------------------#
 
     def __getitem__(self,x):
-        if type(x)!=tuple:
-            return self.data[x]
-            #raise BBMatrixError('error on get[{}]'.format(x))
-        i,j = x
-        return self.data[i,j]
-
+        return self.data[x]
 
     def __setitem__(self,x,v):
-        if type(x)!=tuple:
-            raise BBMatrixError('error on set[{}] = {}'.format(x,v))
-        i,j = x
-        self.data[i,j] = v
+        self.data[x] = v
+
+    #------------------------------- [sum] -------------------------------#
+
+    def sumcols(self,cols):
+        return self.data[:,cols].sum(axis=1,keepdims=True)
+
+    def sumrows(self,rows):
+        return self.data[rows,:].sum(axis=0,keepdims=True)
+
+    #------------------------------- [subtract] -------------------------------#
+
+    def subtract_columns(self,cols):
+        return self._div(*self.data) - self.sumcols(cols)
+
+    #------------------------------- get[rows/cols] -------------------------------#
+
+    def cols(self,inx):
+        return self._c(inx)
+
+    def rows(self,inx):
+        return self._r(inx)
+
+    def col(self,inx):
+        return self._c(inx)
+
+    def row(self,inx):
+        return self._r(inx)
+
+    """retrieves cols corresponding to inx [0,...,n]"""
+    def _c(self,inx):
+        return self.data[:,inx]
+
+    """retrieves rows corresponding to inx [0,...,n]"""
+    def _r(self,inx):
+        return self.data[inx,:]
+
 
     #------------------------------- [slice] -------------------------------#
     """
@@ -130,13 +158,13 @@ class BBMatrix():
 
 class BBMultiMatrix(BBMatrix):
 
-    _div_data = np.vectorize(lambda a,b: 0 if b == 0 else a/b)
+    _div = np.vectorize(lambda a,b: 0 if b == 0 else a/b)
 
     #------------------------------- (access)[get/set] -------------------------------#
 
     def __getitem__(self,x):
         if type(x)!=tuple:
-            return self._div_data(*(d[x] for x in self.data))
+            return self._div(*(d[x] for x in self.data))
         if len(x) == 3:
             i,j,z = x
             return self.data[z][i,j]
@@ -159,6 +187,25 @@ class BBMultiMatrix(BBMatrix):
                 self.data[z][i,j] = v
 
 
+    #------------------------------- [sum] -------------------------------#
+
+    def sumcols(self,cols):
+        return self._div(*(d[:,cols].sum(axis=1,keepdims=True) for d in self.data))
+
+    def sumrows(self,rows):
+        return self._div(*(d[rows,:].sum(axis=0,keepdims=True) for d in self.data))
+
+    #------------------------------- get[rows/cols] -------------------------------#
+
+    """retrieves cols corresponding to inx [0,...,n]"""
+    def _c(self,inx):
+        return self._div(*(d[:,inx] for d in self.data))
+
+    """retrieves rows corresponding to inx [0,...,n]"""
+    def _r(self,inx):
+        return self._div(*(d[inx,:] for d in self.data))
+
+
     #------------------------------- [shape] -------------------------------#
 
     @property
@@ -168,11 +215,11 @@ class BBMultiMatrix(BBMatrix):
     #------------------------------- (as)[pandas] -------------------------------#
 
     def np(self):
-        return self._div_data(*self.data)
+        return self._div(*self.data)
 
 
     #------------------------------- [iter] -------------------------------#
 
     def __iter__(self):
-        for x in self._div_data(*self.data):
+        for x in self._div(*self.data):
             yield x

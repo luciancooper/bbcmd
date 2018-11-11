@@ -4,7 +4,7 @@ from arrpy.inx import SeqIndex
 import numpy as np
 from pyutil.core import zipmap
 from bbmatrix.core import BBMatrix
-from .core import StatSim,BBSimError
+from .core import StatSim,RosterSim,BBSimError
 
 ###########################################################################################################
 #                                         LeagueStatSim                                                   #
@@ -12,18 +12,18 @@ from .core import StatSim,BBSimError
 
 class SeasonStatSim(StatSim):
     _prefix_ = 'MLB'
-    dcols = SeqIndex(['PA','AB','O','E','SF','SH','K','BB','IBB','HBP','I','S','D','T','HR'])
+    dcols = SeqIndex(['R','PA','AB','O','E','SF','SH','K','BB','IBB','HBP','I','S','D','T','HR'])
     dtype = 'u4'
 
     def __new__(cls,index,**kwargs):
-        print(f"SeasonStatSim.__new__({cls.__name__})",file=sys.stderr)
+        #print(f"SeasonStatSim.__new__({cls.__name__})",file=sys.stderr)
         if index.n == 2:
             return super().__new__(LeagueStatSim)
         return super().__new__(cls)
 
 
     def __init__(self,index,**kwargs):
-        print(f"SeasonStatSim.__init__()",file=sys.stderr)
+        #print(f"SeasonStatSim.__init__()",file=sys.stderr)
         super().__init__(index,**kwargs)
         self.yinx = None
 
@@ -43,7 +43,13 @@ class SeasonStatSim(StatSim):
         j = self.dcols[stat]
         self.matrix[self.yinx,j]+=inc
 
+
+
     #------------------------------- [stats] -------------------------------#
+
+    def scorerun(self,*args):
+        self._stat('R',1)
+        super().scorerun(*args)
 
     def _event(self,l):
         #self._stats_defense(*l[self.EVENT['dfn']])
@@ -78,12 +84,12 @@ class SeasonStatSim(StatSim):
 class LeagueStatSim(SeasonStatSim):
     _prefix_ = 'LGUE'
 
-    def __new__(cls,matrix,**kwargs):
-        print(f"LeagueStatSim.__new__({cls.__name__})",file=sys.stderr)
+    def __new__(cls,index,**kwargs):
+        #print(f"LeagueStatSim.__new__({cls.__name__})",file=sys.stderr)
         return object.__new__(cls)
 
     def __init__(self,index,**kwargs):
-        print(f"LeagueStatSim.__init__()",file=sys.stderr)
+        #print(f"LeagueStatSim.__init__()",file=sys.stderr)
         super().__init__(index,**kwargs)
         #super(MLBStatSim,self).__init__(**kwargs)
         #self.matrix = matrix
@@ -108,3 +114,20 @@ class LeagueStatSim(SeasonStatSim):
         l = 0 if self.leagues[self.t] == 'A' else 1
         self._data[l,j] += inc
         #self.matrix[self.yinx,j]+=inc
+
+
+
+class NPLeagueStatSim(LeagueStatSim,SeasonStatSim,StatSim,RosterSim):
+
+    _prefix_ = "LGUE NP"
+
+    def __new__(cls,index,**kwargs):
+        #print(f"LeagueStatSim.__new__({cls.__name__})",file=sys.stderr)
+        return object.__new__(cls)
+
+    def _event(self,l):
+        if self._bpid_fpos_ == 0:
+            # If pitcher is batting, don't record stats
+            super(SeasonStatSim,self)._event(l)
+        else:
+            super()._event(l)

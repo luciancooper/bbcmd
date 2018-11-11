@@ -1,6 +1,6 @@
 
 import xml.etree.ElementTree as etree
-import progress
+from progress import MultiBar
 from bbindex.core import BBIndex
 
 class seasonlib():
@@ -71,14 +71,23 @@ class seasonlib():
         return BBIndex(('U15','u1'),data,ids=['gid','team'])
 
 
-    def run(self,sim):
-        bars = progress.MultiBar(2,len(self),prefix=sim._prefix_)
-        for gd in self:
-            sim.initYear(gd.year)
-            with gd:
-                for g in bars.iter(gd,str(gd.year)):
-                    sim.simGame(g,gd.gamectx())
-            sim.endYear()
+    def run(self,sim,progress=True):
+        if progress:
+            bars = MultiBar(2,len(self),prefix=sim._prefix_)
+            for gd in self:
+                sim.initYear(gd.year)
+                with gd:
+                    for g in bars.iter(gd,str(gd.year)):
+                        sim.simGame(g,gd.gamectx())
+                sim.endYear()
+        else:
+            for gd in self:
+                sim.initYear(gd.year)
+                with gd:
+                    for g in gd:
+                        sim.simGame(g,gd.gamectx())
+                sim.endYear()
+                print(f"{sim._prefix_} {gd.year} Complete")
 
 
 class seasondata():

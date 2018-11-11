@@ -64,6 +64,11 @@ class REMSim(StatSim):
             self.states[self.baseoutstate,1]+=1
         super()._event(l)
 
+
+    #------------------------------- [get] -------------------------------#
+
+    
+
 ###########################################################################################################
 #                                            wOBA weights                                                 #
 ###########################################################################################################
@@ -72,9 +77,9 @@ class REMSim(StatSim):
 class wOBAWeightSim(StatSim):
     _prefix_ = 'wOBA'
 
-    E_STR = ('O','O','O','BB','IBB','HBP','I','S','D','T','HR','WP','PB','DI','OA','RUNEVT','BK','FLE')
-    #dcols = SeqIndex(['O','E','SH','SF','K','BB','IBB','HBP','I','S','D','T','HR'])
-    dcols = SeqIndex(['O','SH','SF','BB','IBB','HBP','I','S','D','T','HR'])
+    E_STR = ('O','E','K','BB','IBB','HBP','I','S','D','T','HR')#+('WP','PB','DI','OA','RUNEVT','BK','FLE')
+    dcols = SeqIndex(['O','E','K','BB','IBB','HBP','I','S','D','T','HR'])
+    #dcols = SeqIndex(['O','SH','SF','BB','IBB','HBP','I','S','D','T','HR'])
     dtype = ('f4','u4')
     #statcode = [0,1,2,3,4,5,6,7,8,9,10] # BB(3)HBP(5)S(7)D(8)T(9)HR(10)
     def __init__(self,index,rem_data,**kwargs):
@@ -96,6 +101,12 @@ class wOBAWeightSim(StatSim):
         super().endYear()
 
     #------------------------------- [df] -------------------------------#
+
+    def adjWeights(self):
+        data = self.matrix.subtract_columns(self.dcols.mapValues(['O','E','K']))
+        cols = ['BB','HBP','S','D','T','HR']
+        return pd.DataFrame(data[:,self.dcols.mapValues(cols)],index=self.index.pandas(),columns=cols)
+
 
     def lwdf(self):
         df = self.df()

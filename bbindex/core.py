@@ -334,10 +334,10 @@ class BBIndex():
 
     #------------------------------- (convert) ---------------------------------------------------------------#
 
-    def to_numpy(self):
+    def numpy(self):
         return np.c_[(*(self.column(j) for j in range(self.n)),)]
 
-    def to_pandas(self,**kwargs):
+    def pandas(self,**kwargs):
         if self.n == 1:
             return pd.Index(self.v[-1].tolist(),name=self.ids[0],**kwargs)
         return pd.MultiIndex.from_tuples([*iter(self)],names=self.ids)

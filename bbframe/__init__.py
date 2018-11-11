@@ -134,7 +134,7 @@ class BBFrame():
     #------------------------------- (as)[pandas] -------------------------------#
 
     def to_dataframe(self,index=True,**args):
-        df = pd.DataFrame(np.array(self.data).reshape((self.m,self.n),order='C'),index=self.inx.to_pandas(),columns=self.cols.to_pandas())
+        df = pd.DataFrame(np.array(self.data).reshape((self.m,self.n),order='C'),index=self.inx.pandas(),columns=self.cols.pandas())
         if index==False:
             df.reset_index(inplace=True)
         return df
@@ -219,7 +219,7 @@ class BBMultiFrame(BBFrame):
         return data[0]/data[1]
 
     def to_dataframe(self,index=True,**args):
-        df = pd.DataFrame(self.calc_data(),index=self.inx.to_pandas(),columns=self.cols.to_pandas())
+        df = pd.DataFrame(self.calc_data(),index=self.inx.pandas(),columns=self.cols.pandas())
         if index==False:
             df.reset_index(inplace=True)
         return df
