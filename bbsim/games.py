@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from arrpy.inx import SeqIndex
 from .core import StatSim,BBSimError
 from bbmatrix.core import BBMatrix
@@ -117,7 +118,7 @@ class ScoreSim(StatSim):
 #                                            RunsPerOut                                                   #
 ###########################################################################################################
 
-class RunsPerOutSim(StatSim):
+class RPOSim(StatSim):
 
     _prefix_ = 'RPO'
     dcols = SeqIndex(['R','O'])
@@ -167,6 +168,47 @@ class RunsPerPASim(StatSim):
             self._data[1]+=1
         super()._event(l)
 
+
+    #------------------------------- [cycle](Year) -------------------------------#
+
+    def endYear(self):
+        yinx = self.index[self.year]
+        self.matrix.data[yinx] = self._data
+        self._data.fill(0)
+        super().endYear()
+
+
+class RPWSim(StatSim):
+
+    _prefix_ = 'RPW'
+    dcols = SeqIndex(['R','IP'])
+    dtype = 'u4'
+
+    def __init__(self,index,**kwargs):
+        super().__init__(**kwargs)
+        self._data = np.zeros((self.matrix.n,),dtype=self.matrix.data.dtype)
+
+    #------------------------------- [out] -------------------------------#
+
+    def runsPerWin(self):
+        # RPW = 9*(MLB Runs Scored / MLB Innings Pitched)*1.5 + 3
+        runs = self.matrix[:,0]
+        inn = self.matrix[:,1] / 2
+        rpw = 9 * (runs / inn) * 1.5 + 3
+        return pd.Series(rpw,index=self.index.pandas(),name='R/W')
+
+    def _iter_csv(self):
+        yield '%s,R/W'%','.join(str(x) for x in self.index.ids
+        for inx,data in zip(self.index,self.matrix):
+            rpw = 9 * (data[0] / (data[1] / 2)) * 1.5 + 3
+            yield '%s,%s'%(','.join(str(x) for x in inx),str(rpw))
+
+    #------------------------------- [cycle](Game) -------------------------------#
+
+    def _endGame(self):
+        self._data[0] += (self.score[0]+self.score[1])
+        self._data[1] += self.i
+        super()._endGame()
 
     #------------------------------- [cycle](Year) -------------------------------#
 

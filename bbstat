@@ -5,7 +5,7 @@ sys.path.append('/Users/luciancooper/projects/pymodule')
 
 from bbsim.data import seasonlib
 
-VALID_CMDS = ['ppid','pid','posout','gamestat','gamescore','mlb','league','nopitcher-league','runsperout','runsperpa','woba']
+VALID_CMDS = ['ppid','pid','posout','gamestat','gamescore','mlb','league','nopitcher-league','rpo','runsperpa','rpw','woba']
 
 # arg: 'ppid'
 def run_ppid(data):
@@ -63,10 +63,10 @@ def run_npleague(data):
     data.run(sim)
     return sim
 
-# arg: 'runsperout'
-def run_runsperout(data):
-    from bbsim.games import RunsPerOutSim
-    sim = RunsPerOutSim(data.yearIndex)
+# arg: 'rpo'
+def run_RPO(data):
+    from bbsim.games import RPOSim
+    sim = RPOSim(data.yearIndex)
     data.run(sim)
     return sim
 
@@ -77,6 +77,12 @@ def run_runsperpa(data):
     data.run(sim)
     return sim
 
+# arg: 'rpo'
+def run_RPW(data):
+    from bbsim.games import RPWSim
+    sim = RPWSim(data.yearIndex)
+    data.run(sim)
+    return sim
 
 # arg: 'woba'
 def run_woba(data):
@@ -129,10 +135,12 @@ def option_function(arg):
         return run_league
     if arg == 'nopitcher-league':
         return run_npleague
-    if arg == 'runsperout':
-        return run_runsperout
+    if arg == 'rpo':
+        return run_RPO
     if arg == 'runsperpa':
         return run_runsperpa
+    if arg == 'rpw':
+        return run_RPW
     if arg == 'woba':
         return run_woba
 

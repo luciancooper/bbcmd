@@ -10,11 +10,31 @@ from .core import StatSim,RosterSim,BBSimError
 #                                         LeagueStatSim                                                   #
 ###########################################################################################################
 
+# 0: O
+# 1: E
+# 2: K
+# 3: BB
+# 4: IBB
+# 5: HBP
+# 6: I
+# 7: S
+# 8: D
+# 9: T
+# 10: HR
+# 11: WP
+# 12: PB
+# 13: DI
+# 14: OA
+# 15: RUNEVT
+# 16: BK
+# 17: FLE
+
+
 class SeasonStatSim(StatSim):
     _prefix_ = 'MLB'
-    dcols = SeqIndex(['R','PA','AB','O','E','SF','SH','K','BB','IBB','HBP','I','S','D','T','HR'])
+    dcols = SeqIndex(['R','PA','AB','O','E','SF','SH','K','BB','IBB','HBP','I','S','D','T','HR']+['SB','CS','PO'])
     dtype = 'u4'
-
+    
     def __new__(cls,index,**kwargs):
         #print(f"SeasonStatSim.__new__({cls.__name__})",file=sys.stderr)
         if index.n == 2:
@@ -43,8 +63,6 @@ class SeasonStatSim(StatSim):
         j = self.dcols[stat]
         self.matrix[self.yinx,j]+=inc
 
-
-
     #------------------------------- [stats] -------------------------------#
 
     def scorerun(self,*args):
@@ -52,10 +70,8 @@ class SeasonStatSim(StatSim):
         super().scorerun(*args)
 
     def _event(self,l):
-        #self._stats_defense(*l[self.EVENT['dfn']])
-        code = int(l[self.EVENT['code']])
+        evt,code = l[self.EVENT['evt']],int(l[self.EVENT['code']])
         if code<=10:
-            evt = l[self.EVENT['evt']]
             # (0,1) (2,3,4) (5,6,7,8,9,10)
             if code<=1:
                 # O,E
@@ -65,20 +81,30 @@ class SeasonStatSim(StatSim):
                     self._stat('AB')
             elif code<=4:
                 # K,BB,IBB
-                evt = evt.split('+')[0]
+                e = evt.split('+')
+                evt,e = e[0],e[1:]
                 self._stat(evt)
                 if code==2:
                     self._stat('AB')
+                if len(e):
+                    if e[0] in ['WP','PB','OA','DI']:
+                        e = e[1:]
+                    for re in e:
+                        self._stat(re[-3:-1])
             else:
                 # (HBP,I) (S,D,T,HR)
                 self._stat(evt)
                 if code>6:
                     self._stat('AB')
             self._stat('PA') # Plate Appearance
+        elif code<=14:
+            if '+' in evt:
+                for re in evt.split('+')[1:]:
+                    self._stat(re[-3:-1])
+        elif code==15:
+            for re in evt.split('+'):
+                self._stat(re[-3:-1])
         super()._event(l)
-
-
-
 
 
 class LeagueStatSim(SeasonStatSim):
@@ -113,7 +139,6 @@ class LeagueStatSim(SeasonStatSim):
         j = self.dcols[stat]
         l = 0 if self.leagues[self.t] == 'A' else 1
         self._data[l,j] += inc
-        #self.matrix[self.yinx,j]+=inc
 
 
 

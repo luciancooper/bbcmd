@@ -39,12 +39,15 @@ class Infinite():
         return self.inx-n
 
     def iter(self,it):
-        try:
-            for x in it:
-                yield x
-                self.inc()
-        finally:
-            self.finish()
+        def wrapper():
+            try:
+                for x in it:
+                    yield x
+                    self.inc()
+            finally:
+                self.finish()
+        return wrapper()
+
 
     def update(self):
         pass
@@ -60,7 +63,6 @@ class Progress(Infinite):
     def __init__(self,max=None,**kwargs):
         super().__init__(**kwargs)
         self.max = max
-        #self.max = kwargs.get('max', 100)
 
     @property
     def remaining(self):
@@ -84,13 +86,15 @@ class Progress(Infinite):
 
     def goto(self,inx):
         self.inc(inx-self.inx)
+        return self
 
     def iter(self,it):
-        try:
-            self.max = len(it)
-        except TypeError:
-            pass
-        super().iter(it)
+        if self.max == None:
+            try:
+                self.max = len(it)
+            except TypeError:
+                pass
+        return super().iter(it)
 
     def __iter__(self):
         return self

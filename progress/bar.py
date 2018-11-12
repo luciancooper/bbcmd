@@ -85,7 +85,5 @@ class IncrementalBar(Bar):
         current = self.phases[phase] if phase > 0 else ''
         bar = self.phases[-1]*nfull+current+self.fill[1]*max(0,nempty-len(current))
         #print('self.prefix',self.prefix)
-        prefix = self.prefix.format(self)
-        suffix = self.suffix.format(self=self)
-        line = prefix+(self.bar_padding%bar)+suffix
+        line = self.prefix.format(self)+(self.bar_padding%bar)+self.suffix.format(self=self)
         self.writeln(line)
