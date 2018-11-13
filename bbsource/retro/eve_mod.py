@@ -1,6 +1,6 @@
 
 import re
-from .eve_util import RetroFileError
+from .util import SimFileError
 
 #BMOD = { 'eid':0,'bb':1,'hitloc':2,'bunt':3,'foul':4,'wp':5,'pb':6,'dp':7,'tp':8,'sf':9,'sh':10 }
 BMOD = { 'bb':0,'hitloc':1,'bunt':2,'foul':3,'wp':4,'pb':5,'dp':6,'tp':7,'sf':8,'sh':9 }
@@ -33,7 +33,7 @@ def mergeBB(a,b):
             yield a[i]
             i,j=i+1,j+1
         else:
-            raise RetroFileError('Merge Error (%s & %s) [%s] [%s]'%(a[i],b[j],','.join(a),','.join(b)))
+            raise SimFileError('Merge Error (%s & %s) [%s] [%s]'%(a[i],b[j],','.join(a),','.join(b)))
     while i<x:
         yield a[i]
         i=i+1
@@ -81,7 +81,7 @@ def diffBB(a,b):
         elif a[i]==b[j]:
             i,j=i+1,j+1
         else:
-            raise RetroFileError('Diff Error (%s & %s) [%s] [%s]'%(a[i],b[j],','.join(a),','.join(b)))
+            raise SimFileError('Diff Error (%s & %s) [%s] [%s]'%(a[i],b[j],','.join(a),','.join(b)))
     while i<x:
         yield a[i]
         i=i+1
@@ -151,7 +151,7 @@ def bfmt_hitmod(bmod):
     bb,bunt,foul,dp,tp = bmod[BMOD['bb']],int(bmod[BMOD['bunt']]),int(bmod[BMOD['foul']]),int(bmod[BMOD['dp']]),int(bmod[BMOD['tp']])
     return ['B']*bunt+([bb] if bb!='' else [])+['DP']*dp+['TP']*tp+['FL']*foul
 
-def format(m,bmod):
+def format_mod(m,bmod):
     try:
         m = [x for x in [re.sub(r'[+-]','',i) for i in m] if x!='']
         m = [x for x in m if not (re.search(r'^(?:[RU][\dU]+)+',x) or re.search(r'TH[123H]?',x))]
@@ -167,5 +167,5 @@ def format(m,bmod):
         if 'FL' in bbmod: mod=['FOUL']+mod
         if 'G' in bbmod and 'DP' in bbmod: mod=['GDP']+mod
         return mod
-    except RetroFileError as err:
+    except SimFileError as err:
         raise err.add('BMOD',','.join(bmod))

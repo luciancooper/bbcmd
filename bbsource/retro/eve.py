@@ -1,18 +1,14 @@
 import re
-import bbfile.eve_mod as mod
-import bbfile.eve_adv as adv
-from .eve_util import *
-from .RS import FileEVENT,FileBDATA
-from .team import teamMap
+from .eve_mod import format_mod
+from .eve_adv import adv_split,adv_brevt,adv_merge,adv_format,adv_pbwp
+from .util import list_extract,split_paren,charmerge_list
+from .raw import EVENT,SyncEID,CTX,MOD,DFN
+from .misc import fileTEAM
 import pyutil.search
+import pyutil.multisort
 
 
-EVENT = {
-    'i':0,'t':1,
-    'pid':2,
-    'count':3,'pseq':4,'pitches':slice(3,5),
-    'evt':5
-}
+#EVENT = { 'i':0,'t':1,'pid':2,'count':3,'pseq':4,'pitches':slice(3,5),'evt':5 }
 #BCTX = { 'eid':0,'i':1,'t':2,'o':3,'score':slice(4,6),'bases':6,'adv':slice(7,11) }
 #BROS = { 'eid':0,'bpid':slice(1,3),'ppid':slice(3,5),'pid':slice(1,5),'blpos':5, 'bfpos':6 }
 #BDFN = { 'eid':0,'assist':1,'putout':2,'error':3 }
@@ -216,28 +212,28 @@ def eventline(N,gsim,e,eid,bmod,bdfn,bctx):
     e,a,d = e.replace('#','').replace('!','').replace('?',''),[None,None,None,None],['','','']
     if '.' in e:
         e,ea = e.split('.')
-        for i,x in adv.split(ea.split(';')):
+        for i,x in adv_split(ea.split(';')):
             a[i]=x
     e = [*split_evt(e)]
-    e,m = e[0],mod.format(e[1:],bmod)
+    e,m = e[0],format_mod(e[1:],bmod)
 
     if e in ['WP','PB','BK']:
         # WP/PB/BK
         E = [e]
     elif e in ['DI','OA']:
         # DI/OA
-        PBWP = adv.pbwp(a)
+        PBWP = adv_pbwp(a)
         E = [e if PBWP==None else PBWP]
     elif any(e.startswith(x) for x in ['SB','CS','PO']):
         # SB/CS/PO/POCS
-        PBWP = adv.pbwp(a)
-        #E = ([PBWP] if PBWP else [])+[';'.join(sort_brevt([*adv.brevt(a,e)]))]
-        E = ([PBWP] if PBWP else [])+[*sort_brevt([*adv.brevt(a,e)])]
+        PBWP = adv_pbwp(a)
+        #E = ([PBWP] if PBWP else [])+[';'.join(sort_brevt([*adv_brevt(a,e)]))]
+        E = ([PBWP] if PBWP else [])+[*sort_brevt([*adv_brevt(a,e)])]
     elif e.startswith('FLE'):
         E = ['FLE']
         addError(d,e[-1])
     elif any(e.startswith(x) for x in ['W','I']):
-        PBWP = adv.pbwp(a)
+        PBWP = adv_pbwp(a)
         if a[0]==None:
             a[0]='1',[]
         E = [BB_E[e[0]]]
@@ -254,8 +250,8 @@ def eventline(N,gsim,e,eid,bmod,bdfn,bctx):
                 addError(d,e[1])
             else:
                 # W+SB$ W+CS$ W+PO$ W+POCS$
-                #E = (E+[PBWP] if PBWP else E)+[';'.join(sort_brevt([*adv.brevt(a,e)]))]
-                E = (E+[PBWP] if PBWP else E)+[*sort_brevt([*adv.brevt(a,e)])]
+                #E = (E+[PBWP] if PBWP else E)+[';'.join(sort_brevt([*adv_brevt(a,e)]))]
+                E = (E+[PBWP] if PBWP else E)+[*sort_brevt([*adv_brevt(a,e)])]
         #^(?:W|I|IW)\b\+
     elif e=='HP':
         # Hit by Pitch (Ball is dead)
@@ -267,15 +263,15 @@ def eventline(N,gsim,e,eid,bmod,bdfn,bctx):
             a[0]=HIT_B[e[0]],[]
         E = [HIT_E[e[0]]]
     elif e.startswith('K'):
-        PBWP = adv.pbwp(a)
+        PBWP = adv_pbwp(a)
         E = ['K']
         if '+' in e:
             kevt,e = e.split('+')
             if len(kevt)>1:
-                adv.merge(a,0,'X',[kevt[1:]])
+                adv_merge(a,0,'X',[kevt[1:]])
             elif a[0]==None:
                 a[0] = ('X',['2'])
-            #adv.merge(a,0,'X',[kevt[1:]] if len(kevt)>1 else [])
+            #adv_merge(a,0,'X',[kevt[1:]] if len(kevt)>1 else [])
             if e in ['WP','PB','DI','OA']:
                 # K+WP K+PB K+DI K+OA
                 if PBWP:
@@ -287,27 +283,27 @@ def eventline(N,gsim,e,eid,bmod,bdfn,bctx):
                 addError(d,e[1])
             else:
                 # K+SB$ K+CS$ K+PO$ K+POCS$
-                #E = (E+[PBWP] if PBWP else E)+[';'.join(sort_brevt([*adv.brevt(a,e)]))]
-                E = (E+[PBWP] if PBWP else E)+[*sort_brevt([*adv.brevt(a,e)])]
+                #E = (E+[PBWP] if PBWP else E)+[';'.join(sort_brevt([*adv_brevt(a,e)]))]
+                E = (E+[PBWP] if PBWP else E)+[*sort_brevt([*adv_brevt(a,e)])]
         else:
             kevt = e
             if len(kevt)>1:
-                adv.merge(a,0,'X',[kevt[1:]])
+                adv_merge(a,0,'X',[kevt[1:]])
             elif a[0]==None:
                 a[0] = ('X',['2'])
-            #adv.merge(a,0,'X',[kevt[1:]] if len(kevt)>1 else ['2'])
+            #adv_merge(a,0,'X',[kevt[1:]] if len(kevt)>1 else ['2'])
 
         # K+E2
     elif e.startswith('C'):
-        adv.merge(a,0,'1',[m[0]])
+        adv_merge(a,0,'1',[m[0]])
         m = m[1:]
         E = ['I']
     else:
         if e.startswith('E'):
-            adv.merge(a,0,'1',[e])
+            adv_merge(a,0,'1',[e])
             E = ['E']
         elif e.startswith('FC'):
-            #adv.merge(a,0,'1',[])
+            #adv_merge(a,0,'1',[])
             if a[0]==None: a[0]='1',[]
             m = m+['FC']
             E = ['O']
@@ -315,17 +311,17 @@ def eventline(N,gsim,e,eid,bmod,bdfn,bctx):
             oadv,E = [*sort_outs([*split_outs(e)])],['O']
             if oadv[0][0]=='B':
                 if re.search(r'E\d(?:\/TH[123H]?)?$',oadv[0][1]):
-                    adv.merge(a,0,'1',[oadv[0][1]])
+                    adv_merge(a,0,'1',[oadv[0][1]])
                     oadv,E = oadv[1:],['E']
             else:
-                adv.merge(a,0,'1',[])
+                adv_merge(a,0,'1',[])
             for i,x in oadv:
-                adv.merge(a,BASE[i],'X',[x])
+                adv_merge(a,BASE[i],'X',[x])
         sac,m = list_extract(['SF','SH'],m)
         if sac:
             E += [sac]
     ra = [None]*4
-    for i,x in adv.format(a,d,bdfn):
+    for i,x in adv_format(a,d,bdfn):
         ra[i]=x
 
     rsadv = [(None if x=='' else x) for x in bctx[BCTX['adv']]]
@@ -380,15 +376,19 @@ def _teamLeagues(home,away,teamdata):
     assert (a != None), f"league for team '{a}' could not be found"
     return (teamdata[-1][h],teamdata[-1][a])
 
+def _teamMap(year):
+    teams = [list(x) for x in zip(*((l[:3],l[-1]) for l in fileTEAM(year)))]
+    return pyutil.multisort.sortset(teams)
+
 ################################ [run] ################################################################
 
 def fileEVE(year):
     #print('compile.gamefile %i'%year,end=' ')
     #logf.write('-----------[{}]-----------\n'.format(year))
     year = str(year)
-    teamdata = teamMap(year)
+    teamdata = _teamMap(year)
     gamecount = 0
-    with FileEVENT(year,['g','i','l','o','e','s','d']) as f, FileBDATA(year,'CTX','MOD','DFN') as fd:
+    with EVENT(year,['g','i','l','o','e','s','d']) as f, SyncEID(year,CTX,MOD,DFN) as fd:
         i,l = f.nextline()
         while i=='g':
             home,date,gn = l[:3],l[3:-1],l[-1]
@@ -402,7 +402,7 @@ def fileEVE(year):
             away = info[INFO['visteam']]
             gid = date+home+away+gn
             hLG,aLG = _teamLeagues(home,away,teamdata)
-            yield 'G,%s,%s,%s,%s\n'%(gid,_infoline(info),hLG,aLG)
+            yield 'G,%s,%s,%s,%s'%(gid,_infoline(info),hLG,aLG)
             ############# [lineup] #############
             bat,pos = [[None]*9,[None]*9],[[None]*10,[None]*10]
             while (i=='l'):
@@ -410,29 +410,29 @@ def fileEVE(year):
                 pos[t][dp]=pid.upper()
                 if (bo>0):bat[t][bo-1]=dp
                 i,l = f.nextline()
-            yield 'L,%s\n'%','.join([pos[0][0]]+['%s:%i'%(pos[0][x],x) for x in bat[0]]+[pos[1][0]]+['%s:%i'%(pos[1][x],x) for x in bat[1]])
+            yield 'L,%s'%','.join([pos[0][0]]+['%s:%i'%(pos[0][x],x) for x in bat[0]]+[pos[1][0]]+['%s:%i'%(pos[1][x],x) for x in bat[1]])
             ############# [event] #############
             gsim = [0,1 if info[INFO['htbf']]=='true' else 0,0,0]
             N = 0
             while i in ['e','s','o']:
                 l = l.split(',')
                 if i=='o':
-                    yield 'O,%i,%s,%i\n'%(N+1,l[0],int(l[1])-1)
+                    yield 'O,%i,%s,%i'%(N+1,l[0],int(l[1])-1)
                     i,l = f.nextline()
                     continue
                 if i=='s':
                     # write S (sub-line) eg [raucj001,0,0,1](pid,t,bo,dp)
-                    yield 'S,%i,%s\n'%(N+1,subline(l))
+                    yield 'S,%i,%s'%(N+1,subline(l))
                     i,l = f.nextline()
                     continue
-                eid,(ctx,mod,dfn) = fd.nextline()
+                eid,(ctx,mod,dfn) = next(fd)
                 try:
                     eline = eventline(N+1,gsim,l[-1],eid,mod.split(','),dfn.split(','),ctx.split(','))
                 except RetroError as err:
                     raise err.event(l[-1]).game(gid)
                 #eventset.add(eline[0])
                 #advset.add([z for y in [[*split_paren(x[1:])] for x in eline[ELINE['adv']] if x!=''] for z in y])
-                yield 'E,%s\n'%','.join(eline)
+                yield 'E,%s'%','.join(eline)
                 i,l = f.nextline()
                 N+=1
             ############# [data] ############ #,er,pavac001,1
@@ -442,7 +442,7 @@ def fileEVE(year):
                 if int(r)>0:
                     ER.append('%s:%s'%(ppid.upper(),r))
                 i,l = f.nextline()
-            yield 'F,%s,%s,%s,%s\n'%(*('' if p==None else p.upper() for p in (info[INFO['wp']],info[INFO['lp']],info[INFO['save']])),';'.join(ER))
+            yield 'F,%s,%s,%s,%s'%(*('' if p==None else p.upper() for p in (info[INFO['wp']],info[INFO['lp']],info[INFO['save']])),';'.join(ER))
             #########################
             gamecount+=1
 

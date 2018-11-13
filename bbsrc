@@ -1,0 +1,143 @@
+#!/usr/bin/env python
+
+import sys
+sys.path.append('/Users/luciancooper/projects/pymodule')
+from progress import IncrementalBar
+
+VALID_CMDS = ['EVT','CTX','ROS','DFN','MOD','EVENT','EVE','ROSTER','CONTEXT','TEAM','GID']
+
+# arg: 'EVT years'
+def run_EVT(years):
+    from bbsource.retro.raw import EVT
+    for y in IncrementalBar(prefix='EVT').iter(years):
+        with open(f'EVT/{y}.txt','w') as f,EVT(y) as evt:
+            for l in evt:
+                print("%s,%s"%l,file=f)
+
+# arg: 'CTX years'
+def run_CTX(years):
+    from bbsource.retro.raw import CTX
+    for y in IncrementalBar(prefix='CTX').iter(years):
+        with open(f'CTX/{y}.txt','w') as f,CTX(y) as ctx:
+            for l in ctx:
+                print("%s,%s"%l,file=f)
+# arg: 'ROS years'
+def run_ROS(years):
+    from bbsource.retro.raw import ROS
+    for y in IncrementalBar(prefix='ROS').iter(years):
+        with open(f'ROS/{y}.txt','w') as f,ROS(y) as ros:
+            for l in ros:
+                print("%s,%s"%l,file=f)
+# arg: 'DFN years'
+def run_DFN(years):
+    from bbsource.retro.raw import DFN
+    for y in IncrementalBar(prefix='DFN').iter(years):
+        with open(f'DFN/{y}.txt','w') as f,DFN(y) as dfn:
+            for l in dfn:
+                print("%s,%s"%l,file=f)
+# arg: 'MOD years'
+def run_MOD(years):
+    from bbsource.retro.raw import MOD
+    for y in IncrementalBar(prefix='MOD').iter(years):
+        with open(f'MOD/{y}.txt','w') as f,MOD(y) as mod:
+            for l in mod:
+                print("%s,%s"%l,file=f)
+
+
+# arg: 'EVENT years'
+def run_EVENT(years):
+    from bbsource.retro.raw import EVENT
+    for y in IncrementalBar(prefix='EVENT').iter(years):
+        with open(f'EVENT/{y}.txt','w') as f,EVENT(y) as event:
+            for l in event:
+                print("%s,%s"%l,file=f)
+
+# arg: 'EVE years'
+def run_EVE(years):
+    from bbsource.retro.eve import fileEVE
+    for y in IncrementalBar(prefix='EVE').iter(years):
+        with open(f'EVE/{y}.txt','w') as f:
+            for l in fileEVE(y):
+                print(l,file=f)
+
+
+# arg: 'ROSTER years'
+def run_ROSTER(years):
+    from bbsource.retro.misc import fileROSTER
+    for y in IncrementalBar(prefix='ROSTER').iter(years):
+        with open(f'ROSTER/{y}.txt','w') as f:
+            for l in fileROSTER(y):
+                print(l,file=f)
+
+# arg: 'CONTEXT years'
+def run_CONTEXT(years):
+    from bbsource.retro.misc import fileCONTEXT
+    for y in IncrementalBar(prefix='CONTEXT').iter(years):
+        with open(f'CONTEXT/{y}.txt','w') as f:
+            for l in fileCONTEXT(y):
+                print(l,file=f)
+
+
+# arg: 'TEAM years'
+def run_TEAM(years):
+    from bbsource.retro.misc import fileTEAM
+    for y in IncrementalBar(prefix='TEAM').iter(years):
+        with open(f'TEAM/{y}.txt','w') as f:
+            for l in fileTEAM(y):
+                print(l,file=f)
+
+# arg: 'GID years'
+def run_GID(years):
+    from bbsource.retro.misc import fileGID
+    for y in IncrementalBar(prefix='GID').iter(years):
+        with open(f'GID/{y}.txt','w') as f:
+            for l in fileGID(y):
+                print(l,file=f)
+
+
+### Parse Year
+def _parse_yeararg(arg):
+    if '-' in arg:
+        y0,y1 = arg.split('-')
+        return [*range(int(y0),int(y1)+1)]
+    return [int(arg)]
+
+def main(arg,*args):
+    if arg.endswith('-help'):
+        print(f"use one of the following options to scrape baseball data: {VALID_CMDS}",file=sys.stderr)
+        return
+    if arg not in VALID_CMDS:
+        print(f"'{arg}' is not a valid option choice",file=sys.stderr)
+        return
+    if len(args)==0:
+        print('Need to provide years',file=sys.stderr)
+
+    years = [i for j in [_parse_yeararg(a) for a in args] for i in j]
+
+    if arg == 'EVT':
+        run_EVT(years)
+    elif arg == 'CTX':
+        run_CTX(years)
+    elif arg == 'ROS':
+        run_ROS(years)
+    elif arg == 'DFN':
+        run_DFN(years)
+    elif arg == 'MOD':
+        run_MOD(years)
+    elif arg == 'EVENT':
+        run_EVENT(years)
+    elif arg == 'EVE':
+        run_EVE(years)
+    elif arg == 'ROSTER':
+        run_ROSTER(years)
+    elif arg == 'CONTEXT':
+        run_CONTEXT(years)
+    elif arg == 'TEAM':
+        run_TEAM(years)
+    elif arg == 'GID':
+        run_GID(years)
+
+
+if __name__=='__main__':
+    arg = sys.argv[1]
+    main(arg,*sys.argv[2:])

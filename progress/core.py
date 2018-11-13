@@ -46,6 +46,7 @@ class Infinite():
                     self.inc()
             finally:
                 self.finish()
+        self.update()
         return wrapper()
 
 

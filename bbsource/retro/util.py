@@ -1,6 +1,7 @@
 
 
-class RetroFileError(Exception):
+
+class SimFileError(Exception):
     def __init__(self,message):
         super().__init__(message)
     def event(self,event):
@@ -66,6 +67,7 @@ def charmerge_list(a,b):
     elif j<B:
         yield b[j:]
 
+
 def charsort_set(l):
     if len(l)<=1:
         if len(l)==1: yield l
@@ -95,23 +97,6 @@ def charsort_list(l):
     m = len(l)//2
     a,b = ''.join(charsort_list(l[:m])),''.join(charsort_list(l[m:]))
     i,j,A,B = 0,0,m,m+len(l)%2
-    while i<A and j<B:
-        if a[i]<b[j]:
-            yield a[i]
-            i=i+1
-        elif a[i]>b[j]:
-            yield b[j]
-            j=j+1
-        else:
-            yield a[i]+b[j]
-            i,j=i+1,j+1
-    if i<A:
-        yield a[i:]
-    elif j<B:
-        yield b[j:]
-
-def charmerge_list(a,b):
-    i,j,A,B = 0,0,len(a),len(b)
     while i<A and j<B:
         if a[i]<b[j]:
             yield a[i]

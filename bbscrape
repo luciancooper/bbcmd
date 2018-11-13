@@ -38,10 +38,6 @@ def fg_parkfactor(*args):
         print(e,file=sys.stderr)
 
 
-def option_function(arg):
-    if arg == 'fg-players':
-        return fg_players
-
 def main(arg,*args):
     if arg.endswith('-help'):
         print(f"use one of the following options to scrape baseball data: {VALID_CMDS}",file=sys.stderr)
