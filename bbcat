@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+OUTDIR=$1
+for i in $(seq 1990 2016); do
+  echo "COMPILE GAME EVENT FILES $i > ${OUTDIR}/$i"
+  cat ${i}*.EV* > "${OUTDIR}/${i}.txt"
+done

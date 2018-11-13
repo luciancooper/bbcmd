@@ -1,9 +1,9 @@
 import re
 from .eve_mod import format_mod
 from .eve_adv import adv_split,adv_brevt,adv_merge,adv_format,adv_pbwp
-from .util import list_extract,split_paren,charmerge_list
-from .raw import EVENT,SyncEID,CTX,MOD,DFN
-from .misc import fileTEAM
+from .util import SimFileError,list_extract,split_paren,charmerge_list
+from .raw import EVE,SyncEID,CTX,MOD,DFN
+from .misc import simTEAM
 import pyutil.search
 import pyutil.multisort
 
@@ -182,7 +182,7 @@ def sort_brevt(l):
             yield b[j]
             j=j+1
         else:
-            raise RetroError('Baserunner Event on Same Runner [%s][%s] (%s)(%s)'%(a[i],b[i],','.join(a),','.join(b)))
+            raise SimFileError('Baserunner Event on Same Runner [%s][%s] (%s)(%s)'%(a[i],b[i],','.join(a),','.join(b)))
     while i<A:
         yield a[i]
         i=i+1
@@ -244,7 +244,7 @@ def eventline(N,gsim,e,eid,bmod,bdfn,bctx):
                 if PBWP:
                     if e in ['DI','OA',PBWP]:
                         E = E+[PBWP]
-                    else: raise RetroError('[%s] & [%s] in same event %s'%(e,PVBWP))
+                    else: raise SimFileError('[%s] & [%s] in same event %s'%(e,PVBWP))
                 else: E = E+[e]
             elif e[0]=='E': # W+E$
                 addError(d,e[1])
@@ -277,7 +277,7 @@ def eventline(N,gsim,e,eid,bmod,bdfn,bctx):
                 if PBWP:
                     if e in ['DI','OA',PBWP]:
                         E = E+[PBWP]
-                    else: raise RetroError('[%s] & [%s] in same event %s'%(e,PBWP))
+                    else: raise SimFileError('[%s] & [%s] in same event %s'%(e,PBWP))
                 else: E = E+[e]
             elif e[0]=='E': #K+E$
                 addError(d,e[1])
@@ -326,7 +326,7 @@ def eventline(N,gsim,e,eid,bmod,bdfn,bctx):
 
     rsadv = [(None if x=='' else x) for x in bctx[BCTX['adv']]]
     lcadv = [x[0] if x!=None else str(i) if j else None for i,j,x in zip(range(0,4),_bititer(gsim[3]<<1,4),ra)]
-    if (rsadv!=lcadv): raise RetroError('lc[%s] rs[%s] (%s)'%(']['.join(' ' if x==None else x for x in lcadv),']['.join(' ' if x==None else x for x in rsadv),'+'.join(E)))
+    if (rsadv!=lcadv): raise SimFileError('lc[%s] rs[%s] (%s)'%(']['.join(' ' if x==None else x for x in lcadv),']['.join(' ' if x==None else x for x in rsadv),'+'.join(E)))
     _gctx(gsim,lcadv)
     #if not all(x==y for x,y in zip(d,bdfn)):
     #    logf.write('A({0:}|{3:}) P({1:}|{4:}) E({2:}|{5:}) [{6:}] {7:}\n'.format(*d,*bdfn,_evt,_str_a(a)))
@@ -377,18 +377,20 @@ def _teamLeagues(home,away,teamdata):
     return (teamdata[-1][h],teamdata[-1][a])
 
 def _teamMap(year):
-    teams = [list(x) for x in zip(*((l[:3],l[-1]) for l in fileTEAM(year)))]
+    teams = [list(x) for x in zip(*((l[:3],l[-1]) for l in simTEAM(year)))]
     return pyutil.multisort.sortset(teams)
 
 ################################ [run] ################################################################
 
-def fileEVE(year):
+HAND = { 'R':0,'L':1 }
+
+def simEVE(year):
     #print('compile.gamefile %i'%year,end=' ')
     #logf.write('-----------[{}]-----------\n'.format(year))
     year = str(year)
     teamdata = _teamMap(year)
     gamecount = 0
-    with EVENT(year,['g','i','l','o','e','s','d']) as f, SyncEID(year,CTX,MOD,DFN) as fd:
+    with EVE(year,'gilesobpd') as f, SyncEID(year,CTX,MOD,DFN) as fd:
         i,l = f.nextline()
         while i=='g':
             home,date,gn = l[:3],l[3:-1],l[-1]
@@ -414,10 +416,20 @@ def fileEVE(year):
             ############# [event] #############
             gsim = [0,1 if info[INFO['htbf']]=='true' else 0,0,0]
             N = 0
-            while i in ['e','s','o']:
+            while i in 'esobp':
                 l = l.split(',')
                 if i=='o':
                     yield 'O,%i,%s,%i'%(N+1,l[0],int(l[1])-1)
+                    i,l = f.nextline()
+                    continue
+                if i=='b':
+                    # pid,hand
+                    yield 'B,%i,%i'%(N+1,HAND[l[1]])
+                    i,l = f.nextline()
+                    continue
+                if i=='p':
+                    # pid,hand
+                    yield 'P,%i,%i'%(N+1,HAND[l[1]])
                     i,l = f.nextline()
                     continue
                 if i=='s':
@@ -428,8 +440,8 @@ def fileEVE(year):
                 eid,(ctx,mod,dfn) = next(fd)
                 try:
                     eline = eventline(N+1,gsim,l[-1],eid,mod.split(','),dfn.split(','),ctx.split(','))
-                except RetroError as err:
-                    raise err.event(l[-1]).game(gid)
+                except SimFileError as err:
+                    raise err.event(gid,N+1,l[-1])
                 #eventset.add(eline[0])
                 #advset.add([z for y in [[*split_paren(x[1:])] for x in eline[ELINE['adv']] if x!=''] for z in y])
                 yield 'E,%s'%','.join(eline)

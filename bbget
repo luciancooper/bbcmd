@@ -1,56 +1,63 @@
 #!/usr/bin/env python
 
 import sys
-import progress
-import requests
-import time
-import sys
-sys.path.append('/Users/luciancooper/projects/pymodule')
-import arrpy
+import os
+from progress import IncrementalBar
+import urllib.request
+from zipfile import ZipFile
 
-from bbsim.data import seasonlib
+#sys.path.append('/Users/luciancooper/projects/pymodule')
+
+def download_zip(year,outdir):
+    url = f"https://www.retrosheet.org/events/{year}eve.zip"
+    file = f"{outdir}/{year}.zip"
+    with urllib.request.urlopen(url) as resp, open(file,'wb') as f:
+        f.write(resp.read())
+    return file
+
+def extract_zip(file):
+    path = os.path.dirname(file)
+    with ZipFile(file, 'r') as z:
+        z.extractall(path)
+    os.remove(file)
+
+### Parse Years
+
+def parse_range(arg):
+    y0,y1 = arg.split('-')
+    return range(int(y0),int(y1)+1)
+
+def parse_years(arg):
+    return [i for j in [[*parse_range(a)] if ('-' in a) else [int(a)] for a in arg.split(',')] for i in j]
+
+### Main
+
+def wipe_outpath(path):
+    f = os.listdir(path)
+    if len(f) == 0:
+        return
+    check = input(f"Going to remove {len(f)} items from '{path}', [y] to confirm:")
+    if check.lower() != 'y':
+        print('Not going to remove items')
+        return
+    for x in f:
+        os.remove(f"{path}/{x}")
 
 
-CHUNKSIZE = 1024
-
-def downloadFile(url,tofile):
-    r = requests.get(url, stream=True)
-    total_size = int(r.headers['content-length'])
-    bar = progress.IncrementalBar(10,prefix='Downloading')
-    with open(tofile, 'wb') as f:
-        for data in r.iter_content(chunk_size = CHUNKSIZE):
-            f.write(data)
-
-
-#def downloadYearData(year,todir):
-
-
-def single_bar():
-    bar = progress.IncrementalBar(30,prefix='Downloading')
-    for i in bar:
-        time.sleep(0.05)
-
-def multi_bar():
-    bar = progress.MultiBar(2,5,'First Level')
-    for i in range(len(bar)):
-        for x in bar.iter(range(50),'Second Level (%i)'%i):
-            time.sleep(0.05)
 
 def main():
-    bar = progress.IncrementalBar(prefix='Downloading')
-    items = [*range(0,30)]
-    bar = progress.IncrementalBar(prefix='Downloading')
-    i = bar.iter(items)
-    for x in i:
-        print(x)
-        time.sleep(0.05)
-    #print('bbget',file=sys.stderr)
-    #data = seasonlib('bbdata.xml')
-    #print(f"pids:{len(data[2015].pid)}")
-    #print(f"gids:{len(data[2015].gid)}")
-    #index = arrpy.SetIndex(data.pid,name=['year','team','pid'])
-    #print(f"index:{len(index)}")
-
+    import argparse
+    parser = argparse.ArgumentParser(description="Retrosheet Source Downloader")
+    parser.add_argument('years',type=parse_years,help='years to download data for')
+    parser.add_argument('outdir',nargs='?',default=os.getcwd(),help='path to download files to')
+    parser.add_argument('-w','--wipe',action='store_true',help='Wipe path before downloading')
+    args = parser.parse_args()
+    #print(args)
+    if args.wipe:
+        wipe_outpath(args.outdir)
+    for y in IncrementalBar(prefix='downloading files').iter(args.years):
+        z = download_zip(y,args.outdir)
+        extract_zip(z)
 
 if __name__=='__main__':
     main()

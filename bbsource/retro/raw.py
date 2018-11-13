@@ -87,7 +87,7 @@ class SyncEID():
 
 ################################ [EVT] ################################################################
 
-class EVT(RetroFileBEVENT,RetroFile):
+class ECODE(RetroFileBEVENT,RetroFile):
     FLD = { 'evt':0 }
     @classmethod
     def format_line(cls,line):
@@ -122,12 +122,25 @@ class ROS(RetroFileBEVENT,RetroFile):
     FLD = {
         'bpid':slice(0,2),'ppid':slice(2,4),'pid':slice(0,4),'bfpos':4,'blpos':5,
     }
+
     @classmethod
     def format_line(cls,line):
         eid,line = super().format_line(line)
         pid = [x.upper() for x in line[cls.FLD['pid']]]
         blpos = int(line[cls.FLD['blpos']])-1
         line = ','.join(pid+[str(blpos),line[cls.FLD['bfpos']]])
+        return eid,line
+
+################################ [HND] ################################################################
+
+class HND(RetroFileBEVENT,RetroFile):
+    FLD = { 'bat':0,'batresp':1,'ptch':2,'ptchresp':3,'hand':slice(0,4,2),'handresp':slice(1,4,2) }
+    _H = { 'R':'0','L':'1' }
+    @classmethod
+    def format_line(cls,line):
+        eid,line = super().format_line(line)
+        line = [cls._H[x] for x in line]
+        line = ','.join(line[cls.FLD['hand']]+line[cls.FLD['handresp']])
         return eid,line
 
 
@@ -176,29 +189,20 @@ class MOD(RetroFileBEVENT,RetroFile):
         return eid,line
 
 
-################################ [HND] ################################################################
-
-class HND(RetroFileBEVENT,RetroFile):
-    FLD = { 'bat':0,'batresp':1,'ptch':2,'ptchresp':3,'hand':slice(0,4,2),'handresp':slice(1,4,2) }
-    @classmethod
-    def format_line(cls,line):
-        eid,line = super().format_line(line)
-        line = ','.join(line[cls.FLD['hand']]+line[cls.FLD['handresp']])
-        return eid,line
 
 
 
 ################################ [EVENT] ################################################################
 
-class EVENT(RetroFile):
-    def __init__(self,year,lcode=['g','i','l','e','s','d','o','t','b','j','u','r']):
+class EVE(RetroFile):
+    def __init__(self,year,lcodes='gilesdopbjur'):
         super().__init__(year)
         self.subdist = [0,0]
         self.subcount = [0,0]
         self.submidab = [0,0]
         self.inx = [0,0]
         self.i0,self.l0 = None,None
-        self.lcode = lcode
+        self.lcodes = lcodes
 
     def _readnext(self):
         l = self.file.readline()
@@ -219,23 +223,20 @@ class EVENT(RetroFile):
         elif l.startswith('ladj'): # ladj,####
             return 'o',l[5:-1]
         elif l.startswith('padj'): # padj,####
-            return 't',l[5:-1]
+            return 'p',l[5:-1]
         elif l.startswith('badj'): # badj,####
             return 'b',l[5:-1]
         elif l.startswith('com'): # com,"###
-            return self._comline(l[5:-2]) #'c',l[4:-1]
+            l = l[5:-2]
+            if l.startswith('ej,'):  # ej,"###
+                return 'j',l[3:]
+            elif l.startswith('umpchange,'):  # umchange,"###
+                return 'u',l[10:]
+            elif l.startswith('replay,'): # replay,"###
+                return 'r',l[7:]
+            else:
+                return 'c','"'+l+'"'
         return self._readnext()
-
-    @staticmethod
-    def _comline(l):
-        if l.startswith('ej,'):
-            return 'j',l[3:]
-        elif l.startswith('umpchange,'):
-            return 'u',l[10:]
-        elif l.startswith('replay,'):
-            return 'r',l[7:]
-        else:
-            return 'c','"'+l+'"'
 
     @staticmethod
     def _pidline(l):
@@ -279,7 +280,7 @@ class EVENT(RetroFile):
         if line == None:
             raise StopIteration
         i,l = self._nextline(*line)
-        if i in self.lcode:
+        if i in self.lcodes:
             return (i,l)
         return self.__next__()
 
@@ -288,7 +289,7 @@ class EVENT(RetroFile):
         if line == None:
             return None,None
         i,l = self._nextline(*line)
-        if i in self.lcode:
+        if i in self.lcodes:
             return (i,l)
         return self.nextline()
 
@@ -317,10 +318,10 @@ class EVENT(RetroFile):
                     while j=='c':
                         j,b = self._readnext()
 
-                elif j=='t':# or j=='b':
-                    j,b = self._readnext()
-                    while j=='c':
-                        j,b = self._readnext()
+                #elif j=='p':# or j=='b':
+                #    j,b = self._readnext()
+                #    while j=='c':
+                #       j,b = self._readnext()
                 elif j=='c':
                     j,b,com = self.comment(b)
                 else:
@@ -337,7 +338,7 @@ class EVENT(RetroFile):
         else:
             if self.i0=='g':
                 self.inx[:] = 0,0
-            if self.i0 in ['g','i','l','d','o','t','b','j','u','r']:
+            if self.i0 in 'gildobprju':
                 line = self.i0,self.l0
                 self.i0,self.l0 = j,b
                 return line

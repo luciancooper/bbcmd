@@ -145,6 +145,10 @@ class GameSim():
                 self._sub(l)
             elif i=='O':
                 self._boot(l)
+            elif i=='B':
+                self._badj(l)
+            elif i=='P':
+                self._padj(l)
         self._final(l)
         self._endGame()
 
@@ -185,6 +189,12 @@ class GameSim():
 
     def _boot(self,l):
         assert int(l[self.BOOT['t']])==self.t,'BOOT team error b[%s] != sim[%i]'%(l[self.BOOT['t']],self.t)
+
+    def _padj(self,l):
+        pass
+
+    def _badj(self,l):
+        pass
 
     def _final(self,l):
         pass

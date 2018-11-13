@@ -4,11 +4,8 @@
 class SimFileError(Exception):
     def __init__(self,message):
         super().__init__(message)
-    def event(self,event):
-        self.args = ('\n'.join(self.args+('Event [%s]'%event,)),)
-        return self
-    def game(self,gameid):
-        self.args = ('\n'.join(self.args+('Game [%s]'%gameid,)),)
+    def event(self,gameid,eid,evt):
+        self.args = ('\n'.join(self.args+(f'Event [{gameid}]-[{eid}] ({evt})',)),)
         return self
     def add(self,head,data):
         self.args = ('\n'.join(self.args+('%s [%s]'%(head,data),)),)
