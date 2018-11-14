@@ -1,4 +1,71 @@
 import re
+from .game import GameSim
+import pandas as pd
+from bbmatrix.core import BBMatrix
+
+
+###########################################################################################################
+#                                             RosterSim                                                   #
+###########################################################################################################
+
+class StatSim(GameSim):
+
+    dtype = 'u2'
+    
+    def __init__(self,index,**kwargs):
+        super().__init__(**kwargs)
+        self.index = index
+        m,n = len(index),len(self.dcols)
+        self.matrix = BBMatrix((m,n),dtype=self.dtype)
+
+
+    #------------------------------- [pandas] -------------------------------#
+
+    def df(self,index=True,**args):
+        df = pd.DataFrame(self.matrix.np(),index=self.index.pandas(),columns=self.dcols.pandas())
+        if index==False:
+            df.reset_index(inplace=True)
+        return df
+
+    #------------------------------- [csv] -------------------------------#
+
+    def to_csv(self,file):
+        if type(file)==str:
+            with open(file,'w') as f:
+                for l in self._iter_csv():
+                    print(l,file=f)
+        else:
+            for l in self._iter_csv():
+                print(l,file=file)
+
+
+    def _iter_csv(self):
+        yield '%s,%s'%(','.join(str(x) for x in self.index.ids),','.join(str(x) for x in self.dcols))
+        for inx,data in zip(self.index,self.matrix):
+            yield '%s,%s'%(','.join(str(x) for x in inx),','.join(str(x) for x in data))
+
+
+    #------------------------------- [getter] -------------------------------#
+
+    def __getitem__(self,key):
+        if type(key) == str:
+            if key.isalpha():
+                return self.matrix.cols([self.dcols[key]])
+            return evaluate_mathstring(key,lambda v: self.matrix.cols([self.dcols[v]]))
+        if type(key) == list:
+            if all(type(x)==str for x in key):
+                return self.matrix.cols(self.dcols.mapValues(key))
+            else:
+                return self.matrix.rows(key)
+            #Retrieve Columns
+
+        if type(key) == int:
+            return self.matrix.row(key)
+        raise IndexError(f"{key} is not a valid input")
+
+
+
+###########################################################################################################
 
 def split_mathstr(string):
     start = 0

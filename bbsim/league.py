@@ -4,7 +4,8 @@ from arrpy.inx import SeqIndex
 import numpy as np
 from pyutil.core import zipmap
 from bbmatrix.core import BBMatrix
-from .core import StatSim,RosterSim,BBSimError
+from .core.stat import StatSim
+from .core.roster import RosterSim
 
 ###########################################################################################################
 #                                         LeagueStatSim                                                   #
@@ -34,7 +35,7 @@ class SeasonStatSim(StatSim):
     _prefix_ = 'MLB'
     dcols = SeqIndex(['R','PA','AB','O','E','SF','SH','K','BB','IBB','HBP','I','S','D','T','HR']+['SB','CS','PO'])
     dtype = 'u4'
-    
+
     def __new__(cls,index,**kwargs):
         #print(f"SeasonStatSim.__new__({cls.__name__})",file=sys.stderr)
         if index.n == 2:
@@ -49,13 +50,13 @@ class SeasonStatSim(StatSim):
 
     #------------------------------- [sim](Year) -------------------------------#
 
-    def initYear(self,year):
-        self.yinx = self.index[year]
-        super().initYear(year)
+    def initSeason(self,data):
+        self.yinx = self.index[data.year]
+        super().initSeason(data)
 
-    def endYear(self):
+    def endSeason(self):
         self.yinx = None
-        super().endYear()
+        super().endSeason()
 
     #------------------------------- [stat] -------------------------------#
 
@@ -122,16 +123,16 @@ class LeagueStatSim(SeasonStatSim):
         self._data = np.zeros((2,len(self.dcols)),dtype=np.dtype(self.dtype))
 
     #------------------------------- [sim](Year) -------------------------------#
+    
+    """def initSeason(self,data):
+        #self.yinx = self.matrix.inx[data.year]
+        super(MLBStatSim,self).initSeason(data)"""
 
-    """def initYear(self,year):
-        #self.yinx = self.matrix.inx[year]
-        super(MLBStatSim,self).initYear(year)"""
-
-    def endYear(self):
+    def endSeason(self):
         self.matrix.data[self.yinx.slice] = self._data
         self._data.fill(0)
-        super().endYear()
-        #super(MLBStatSim,self).endYear()
+        super().endSeason()
+        #super(MLBStatSim,self).endSeason()
 
     #------------------------------- [stat] -------------------------------#
 

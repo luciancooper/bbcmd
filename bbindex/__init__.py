@@ -1,5 +1,6 @@
 
 from .core import BBIndex
+from .lookup import BBLookup
 
 ####################################################################################################
 #                                      LUCIAN's BBINDEX MODULE                                     #

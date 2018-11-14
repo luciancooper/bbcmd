@@ -3,7 +3,7 @@ from arrpy.arr import ArrSet
 from arrpy.inx import SeqIndex
 from pyutil.core import zipmap
 from .core import BBSimError
-from .roster import RosterStatSim
+from .player import RosterStatSim
 
 ###########################################################################################################
 #                                         AppearanceSim                                                   #

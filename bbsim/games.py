@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from arrpy.inx import SeqIndex
-from .core import StatSim,BBSimError
+from .core.stat import StatSim
 from bbmatrix.core import BBMatrix
 #from .stats import RosterStatSim,SeasonStatSim
 
@@ -140,11 +140,11 @@ class RPOSim(StatSim):
 
     #------------------------------- [cycle](Year) -------------------------------#
 
-    def endYear(self):
+    def endSeason(self):
         yinx = self.index[self.year]
         self.matrix.data[yinx] = self._data
         self._data.fill(0)
-        super().endYear()
+        super().endSeason()
 
 class RunsPerPASim(StatSim):
 
@@ -171,11 +171,11 @@ class RunsPerPASim(StatSim):
 
     #------------------------------- [cycle](Year) -------------------------------#
 
-    def endYear(self):
+    def endSeason(self):
         yinx = self.index[self.year]
         self.matrix.data[yinx] = self._data
         self._data.fill(0)
-        super().endYear()
+        super().endSeason()
 
 
 class RPWSim(StatSim):
@@ -212,8 +212,8 @@ class RPWSim(StatSim):
 
     #------------------------------- [cycle](Year) -------------------------------#
 
-    def endYear(self):
+    def endSeason(self):
         yinx = self.index[self.year]
         self.matrix.data[yinx] = self._data
         self._data.fill(0)
-        super().endYear()
+        super().endSeason()

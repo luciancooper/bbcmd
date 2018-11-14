@@ -27,7 +27,7 @@ class BBIndex():
 
     @property
     def n(self):
-        return len(self.dtype)
+        return len(self.v)
 
     def __len__(self):
         return len(self.v[-1])
@@ -59,7 +59,7 @@ class BBIndex():
     def __init__(self,dtype,data,ids=None):
         self.dtype = tuple(dtype)
         lvl,val = self._SORT(data)
-        self.i = [np.array(x,dtype=np.uint16) for x in lvl]
+        self.i = [np.array(x,dtype='u2') for x in lvl]
         self.v = [np.array(v,dtype=np.dtype(dt)) for (v,dt) in zip(val,dtype)]
         if ids != None:
             self.ids = ids
@@ -207,12 +207,6 @@ class BBIndex():
 
     #------------------------------- (relations) ---------------------------------------------------------------#
 
-    #def __eq__(self,other):
-
-    #def __contains__(self,v):
-    #    return (self._dtype_verify(v,self.itype) in self.i) if self._dtype_comparable(v,self.itype) else False
-
-
     #------------------------------- (columns) ---------------------------------------------------------------#
 
     @staticmethod
@@ -304,6 +298,18 @@ class BBIndex():
         #print(f"Slice:[{i0}:{i1}]")
         return self._new_slice(j,i0,i1)
 
+    def _index_single_(self,value):
+        i = binaryIndex(self.v[0],value)
+        if i == None: raise IndexError(f"[{value}] not found in first layer")
+        return i
+
+    def _slice_single_(self,value):
+        i = binaryIndex(self.v[0],value)
+        if i == None: raise IndexError(f"[{value}] not found in first layer")
+        i0,i1 = self.i[0][i],self.i[0][i+1]
+        if len(self.i)>1:
+            i0,i1 = binaryLower(self.i[1],i0),binaryLower(self.i[1],i1)
+        return self._new_slice(1,i0,i1)
 
     def __getitem__(self,x):
         if type(x)==slice:
@@ -315,14 +321,12 @@ class BBIndex():
                 return self._slice_(x)
             raise IndexError(f"requested value {x} out of bounds")
 
-        i = binaryIndex(self.v[0],x)
-        if i == None: raise IndexError(f"[{x}] not found in first layer")
         if len(self.i)==0:
-            return i
-        i0,i1 = self.i[0][i],self.i[0][i+1]
-        if len(self.i)>1:
-            i0,i1 = binaryLower(self.i[1],i0),binaryLower(self.i[1],i1)
-        return self._new_slice(1,i0,i1)
+            return self._index_single_(x)
+        else:
+            return self._slice_single_(x)
+
+
 
 
     def _new_slice(self,j,i0,i1):

@@ -2,8 +2,8 @@
 from arrpy.inx import SeqIndex
 import numpy as np
 import pandas as pd
-from .core import StatSim,BBSimError
-from bbmatrix import BBMatrix,REMatrix
+from .core.stat import StatSim
+from bbmatrix import BBMatrix
 
 ###########################################################################################################
 #                                           REM Sim                                                       #
@@ -23,12 +23,12 @@ class REMSim(StatSim):
 
     #------------------------------- [cycle](Year) -------------------------------#
 
-    def endYear(self):
+    def endSeason(self):
         yinx = self.index[self.year]
         for i in range(2):
             self.matrix.data[i][yinx] += self._data[:,i]
         self._data.fill(0)
-        super().endYear()
+        super().endSeason()
 
     #------------------------------- [cycle](Game) -------------------------------#
 
@@ -67,7 +67,7 @@ class REMSim(StatSim):
 
     #------------------------------- [get] -------------------------------#
 
-    
+
 
 ###########################################################################################################
 #                                            wOBA weights                                                 #
@@ -90,15 +90,15 @@ class wOBAWeightSim(StatSim):
 
     #------------------------------- [sim](Year) -------------------------------#
 
-    def initYear(self,year):
-        self.yinx = self.index[year]
+    def initSeason(self,data):
+        self.yinx = self.index[data.year]
         self.rem = REMatrix(self.rem_data[self.yinx])
-        super().initYear(year)
+        super().initSeason(data)
 
-    def endYear(self):
+    def endSeason(self):
         self.rem = None
         self.yinx = None
-        super().endYear()
+        super().endSeason()
 
     #------------------------------- [df] -------------------------------#
 

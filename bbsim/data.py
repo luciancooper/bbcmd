@@ -1,7 +1,7 @@
 
 import xml.etree.ElementTree as etree
 from progress import MultiBar
-from bbindex.core import BBIndex
+from bbindex import BBIndex,BBLookup
 
 class seasonlib():
     def __init__(self,xmlfile):
@@ -75,18 +75,18 @@ class seasonlib():
         if progress:
             bars = MultiBar(2,len(self),prefix=sim._prefix_)
             for gd in self:
-                sim.initYear(gd.year)
+                sim.initSeason(gd)
                 with gd:
                     for g in bars.iter(gd,str(gd.year)):
                         sim.simGame(g,gd.gamectx())
-                sim.endYear()
+                sim.endSeason()
         else:
             for gd in self:
-                sim.initYear(gd.year)
+                sim.initSeason(gd)
                 with gd:
                     for g in gd:
                         sim.simGame(g,gd.gamectx())
-                sim.endYear()
+                sim.endSeason()
                 print(f"{sim._prefix_} {gd.year} Complete")
 
 
@@ -113,6 +113,29 @@ class seasondata():
         return sum(self.g)
 
 
+    def bhand_lookup(self):
+        cols = [list(x) for x in zip(*self._bhand_())]
+        return BBLookup(('U3','U8','u1'),cols,valcol=-1)
+
+    def phand_lookup(self):
+        cols = [list(x) for x in zip(*self._phand_())]
+        return BBLookup(('U3','U8','u1'),cols,valcol=-1)
+
+
+
+
+    def _phand_(self):
+        with open(self.paths['ROS']) as f:
+            for l in f:
+                l = l.strip().split(',')
+                if int(l[3]) == 1:
+                    yield l[1],l[2],int(l[5])
+
+    def _bhand_(self):
+        with open(self.paths['ROS']) as f:
+            for l in f:
+                l = l.strip().split(',')
+                yield l[1],l[2],int(l[4])
 
     def filepath(name):
         def dec(fn):
@@ -134,6 +157,7 @@ class seasondata():
     @filepath('ROS')
     def ppid(self,f):
         return [(self.year,x[0],x[2:5],x[6:14]) for x in f if x[15]=='1']
+
 
     @property
     def gid(self):

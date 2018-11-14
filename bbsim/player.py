@@ -1,6 +1,7 @@
 
 from arrpy.inx import SeqIndex
-from .core import StatSim,RosterSim,BBSimError
+from .core.stat import StatSim
+from .core.roster import RosterSim
 
 ###########################################################################################################
 #                                         RosterStatSim                                                   #
@@ -15,13 +16,13 @@ class RosterStatSim(StatSim,RosterSim):
 
     #------------------------------- [sim](Year) -------------------------------#
 
-    def initYear(self,year):
-        self.yinx = self.index[year]
-        super().initYear(year)
+    def initSeason(self,data):
+        self.yinx = self.index[data.year]
+        super().initSeason(data)
 
-    def endYear(self):
+    def endSeason(self):
         self.yinx = None
-        super().endYear()
+        super().endSeason()
 
     #------------------------------- [lib/game] -------------------------------#
 
