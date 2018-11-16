@@ -44,6 +44,11 @@ class seasonlib():
         return BBIndex(('u2','U1','U3','U8'),data,ids=['year','league','team','pid'])
 
     @property
+    def pidHandedIndex(self):
+        data = [list(x) for x in zip(*(a for b in [s.pidHand for s in self.seasons] for a in b))]
+        return BBIndex(('u2','U1','U3','U8','u1','u1'),data,ids=['year','league','team','pid','bhand','phand'])
+
+    @property
     def ppid(self):
         return [a for b in [s.ppid for s in self.seasons] for a in b]
 
@@ -51,6 +56,11 @@ class seasonlib():
     def ppidIndex(self):
         data = [list(x) for x in zip(*(a for b in [s.ppid for s in self.seasons] for a in b))]
         return BBIndex(('u2','U1','U3','U8'),data,ids=['year','league','team','pid'])
+
+    @property
+    def ppidHandedIndex(self):
+        data = [list(x) for x in zip(*(a for b in [s.ppidHand for s in self.seasons] for a in b))]
+        return BBIndex(('u2','U1','U3','U8','u1','u1'),data,ids=['year','league','team','pid','phand','bhand'])
 
     @property
     def gid(self):
@@ -122,8 +132,6 @@ class seasondata():
         return BBLookup(('U3','U8','u1'),cols,valcol=-1)
 
 
-
-
     def _phand_(self):
         with open(self.paths['ROS']) as f:
             for l in f:
@@ -142,22 +150,40 @@ class seasondata():
             @property
             def wrapper(self):
                 with open(self.paths[name]) as f:
-                    return fn(self,f)
+                    return [*fn(self,f)]
             return wrapper
         return dec
 
     @filepath('TEAM')
     def teams(self,f):
-        return [x[:3] for x in f]
+        for l in f:
+            yield l[:3]
 
     @filepath('ROS')
     def pid(self,f):
-        return [(self.year,x[0],x[2:5],x[6:14]) for x in f]
+        for l in f:
+            yield (self.year,l[0],l[2:5],l[6:14])
+
+    @filepath('ROS')
+    def pidHand(self,f):
+        for l in f:
+            lgue,team,pid = l[0],l[2:5],l[6:14]
+            for i in range(4):
+                yield (self.year,lgue,team,pid,i>>1,i&1)
 
     @filepath('ROS')
     def ppid(self,f):
-        return [(self.year,x[0],x[2:5],x[6:14]) for x in f if x[15]=='1']
+        for l in f:
+            if l[15] == '0': continue
+            yield (self.year,l[0],l[2:5],l[6:14])
 
+    @filepath('ROS')
+    def ppidHand(self,f):
+        for l in f:
+            if l[15] == '0': continue
+            lgue,team,pid = l[0],l[2:5],l[6:14]
+            for i in range(4):
+                yield (self.year,lgue,team,pid,i>>1,i&1)
 
     @property
     def gid(self):

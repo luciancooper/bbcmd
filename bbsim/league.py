@@ -2,7 +2,6 @@
 import sys
 from arrpy.inx import SeqIndex
 import numpy as np
-from pyutil.core import zipmap
 from bbmatrix.core import BBMatrix
 from .core.stat import StatSim
 from .core.roster import RosterSim
@@ -123,7 +122,7 @@ class LeagueStatSim(SeasonStatSim):
         self._data = np.zeros((2,len(self.dcols)),dtype=np.dtype(self.dtype))
 
     #------------------------------- [sim](Year) -------------------------------#
-    
+
     """def initSeason(self,data):
         #self.yinx = self.matrix.inx[data.year]
         super(MLBStatSim,self).initSeason(data)"""

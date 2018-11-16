@@ -29,7 +29,7 @@ class BBLookup(BBIndex):
         ix,lvl,val = self._SORT(data)
         self.i = [np.array(x,dtype='u2') for x in lvl]
         self.v = [np.array(v,dtype=np.dtype(dt)) for (v,dt) in zip(val,dtype)]
-        self.x = np.array(value,dtype=np.dtype(dtype[-1]))
+        self.x = np.array([value[x] for x in ix],dtype=np.dtype(dtype[-1]))
 
 
 

@@ -1,12 +1,6 @@
 
-
-import pyutil
-from pyutil.core import zipmap
-
-
-
 #import bbsrc
-
+from . import BBSimError
 
 # NOSIMLIST --> 20070926SEACLE1
 
@@ -85,15 +79,15 @@ class GameSim():
     FINAL = {'wp':0,'lp':1,'sv':2,'er':3}
 
 
-    def __init__(self,safe=True,report=True):
-        self._stamp = '%s_%s'%(self.__class__.__name__,'{0:}{1:02}{2:02}_{3:02}{4:02}{5:02}'.format(*pyutil.now()))
+    def __init__(self,safe=True):
         # Safe - if context is checked for simulation Sync
         self.safe = safe
-        self.report = report
         # Year
         self.year = None
         # Game ID YYYYMMDDHHHAAAG [Y=year,M=month,D=day,H=hometeam,A=awayteam,G=game number (always 0 unless double header)]
         self.gameid = None
+        # Current Event Number
+        self.eid = None
         # Teams
         self.teams = None
         # Leagues
@@ -108,8 +102,6 @@ class GameSim():
         self.i,self.t,self.o=0,0,0
         # Box Score
         self.score,self.lob = [0,0],[0,0]
-        # Time log to gauge algorithm efficiency
-        self.timer = pyutil.timer()
         # attr where data storage mechanism resides
         self.lib=None
 
@@ -136,6 +128,7 @@ class GameSim():
         self._lineup(lineup)
         for i,l in gl:
             if i=='E':
+                self.eid += 1
                 self._play(l,next(cl))
             elif i=='S':
                 self._sub(l)
@@ -152,6 +145,7 @@ class GameSim():
 
     def _initGame(self,gameid,dh,htbf,site,hlg,alg):
         self.gameid = gameid
+        self.eid = 0
         self.teams = (gameid[11:14],gameid[8:11])
         self.leagues = (alg,hlg)
         self.useDH = int(dh)
@@ -160,7 +154,7 @@ class GameSim():
 
     def _endGame(self):
         '''Clears the simulator in preparation for next game'''
-        self.gameid,self.site,self.teams,self.leagues = None,None,None,None
+        self.gameid,self.eid,self.site,self.teams,self.leagues = None,None,None,None,None
         self.bflg = 0
         self.i,self.t,self.o=0,0,0
         self.score,self.lob = [0,0],[0,0]
@@ -223,7 +217,7 @@ class GameSim():
         return self.t^1
     #------------------------------- [play] -------------------------------#
 
-    def _advance(self,badv,*radv):
+    def _advance(self,badv,radv):
         advflg=0
         for i,a in enumerate(radv):
             if len(a)==0:
@@ -248,7 +242,7 @@ class GameSim():
             return True
         return False
 
-    def scorerun(self,flag):
+    def scorerun(self,flag,*args):
         self.score[self.t]+=1
 
     def outinc(self):
@@ -260,27 +254,34 @@ class GameSim():
         while self.bflg>0:
             self.lob[self.t]+=(self.bflg&1)
             self.bflg=self.bflg>>1
-        self.o=0
-        self.i+=1
-        self.t^=1
+        self.o = 0
+        self.i += 1
+        self.t ^= 1
 
     #------------------------------- [event] -------------------------------#
     def _play(self,l,ctx):
         """ Takes additional Safety Inputs """
-        assert (self.gameid==ctx[0][:15] and int(l[0])==int(ctx[0][-3:])),'Sim Error [%s][%s] ctx[%s]'%(self.gameid,l[0],ctx[0])
-        if self.safe: self._verify(l,ctx)
+        if self.safe:
+            self._verify(l,ctx)
         self._event(l)
 
     def _verify(self,l,ctx):
-        """ Uses safety line inputs to ensure we are not corrupted """
+        """ Uses safety line inputs to ensure the simulation is not corrupted """
+        if self.eid != int(l[0]):
+            raise BBSimError(self.gameid,self.eid,f'event number discrepency with input line {l[0]}')
+        if self.gameid!=ctx[0][:15] or self.eid != int(ctx[0][-3:]):
+            raise BBSimError(self.gameid,self.eid,f'gameid/eid discrepency with context line {ctx[0]}')
         i,t = (int(ctx[x]) for x in [self.CTX['i'],self.CTX['t']])
+        if self.inning!=i or self.t!=t:
+            raise BBSimError(self.gameid,self.eid,f'Inning Discrepency [{self.inning},{self.t}][{i},{t}]')
         a,h = (int(x) for x in ctx[self.CTX['score']])
-        assert (self.inning==i and self.t==t),"<{}> Inning Discrepency [{},{}|{},{}]".format(self.gameid,self.inning,self.t,i,t)
-        assert (self.score[0]==a and self.score[1]==h), "<{}> Score Discrepency [{},{}|{},{}]".format(self.gameid,*self.score,a,h)
+        if self.score[0]!=a or self.score[1]!=h:
+            raise BBSimError(self.gameid,self.eid,f'Score Discrepency [{self.score[0]},{self.score[1]}|{a},{h}]')
+
 
     def _event(self,l):
         """ Idea is this should be executable without ctx safety net """
-        self._advance(*l[self.EVENT['adv']])
+        self._advance(l[self.EVENT['badv']],l[self.EVENT['radv']])
         if self.o==3:self._cycle_inning()
 
 

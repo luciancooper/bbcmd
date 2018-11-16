@@ -46,8 +46,8 @@ class GameStatSim(StatSim):
 
     #------------------------------- [play] -------------------------------#
 
-    def scorerun(self,flag):
-        super().scorerun(flag)
+    def scorerun(self,flag,*args):
+        super().scorerun(flag,*args)
         self._stat(self.t,'R')
         er,ter,rbi = (int(x) for x in flag[1:])
         if rbi: self._stat(self.t,'RBI')
@@ -102,7 +102,7 @@ class GameStatSim(StatSim):
 #                                            ScoreSim                                                     #
 ###########################################################################################################
 
-class ScoreSim(StatSim):
+class GameScoreSim(StatSim):
     _prefix_ = 'Scores'
     dcols = SeqIndex(['a','h'])
 
@@ -130,9 +130,9 @@ class RPOSim(StatSim):
 
     #------------------------------- [stat] -------------------------------#
 
-    def scorerun(self,flag):
+    def scorerun(self,flag,*args):
         self._data[0]+=1
-        super().scorerun(flag)
+        super().scorerun(flag,*args)
 
     def outinc(self):
         self._data[1]+=1
@@ -146,7 +146,7 @@ class RPOSim(StatSim):
         self._data.fill(0)
         super().endSeason()
 
-class RunsPerPASim(StatSim):
+class RPPASim(StatSim):
 
     _prefix_ = 'R/PA'
     dcols = SeqIndex(['R','PA'])
@@ -158,9 +158,9 @@ class RunsPerPASim(StatSim):
 
     #------------------------------- [stat] -------------------------------#
 
-    def scorerun(self,flag):
+    def scorerun(self,flag,*args):
         self._data[0]+=1
-        super().scorerun(flag)
+        super().scorerun(flag,*args)
 
     def _event(self,l):
         code = int(l[self.EVENT['code']])
@@ -204,7 +204,6 @@ class RPWSim(StatSim):
             yield '%s,%s'%(','.join(str(x) for x in inx),str(rpw))
 
     #------------------------------- [cycle](Game) -------------------------------#
-
     def _endGame(self):
         self._data[0] += (self.score[0]+self.score[1])
         self._data[1] += self.i

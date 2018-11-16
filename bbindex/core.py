@@ -366,7 +366,7 @@ class BBIndex():
         return self._toStr()
 
     def __repr__(self):
-        return self._toStr()
+        return self._toStr(showall=True)
 
     def _toStr(self,maxrows=16,showall=False):
         m = len(self)

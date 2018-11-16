@@ -5,100 +5,122 @@ sys.path.append('/Users/luciancooper/projects/pymodule')
 
 from bbsim.data import seasonlib
 
-VALID_CMDS = ['ppid','pid','posout','gamestat','gamescore','mlb','league','nopitcher-league','rpo','runsperpa','rpw','woba']
+###################################################[By Player]###################################################
 
-# arg: 'ppid'
-def run_ppid(data):
-    from bbsim.roster import PIDStatSim
-    sim = PPIDStatSim(data.ppidIndex)
+# arg: -r batting
+def player_batting(data,verify):
+    from bbsim.player import PlayerBattingStatSim
+    sim = PlayerBattingStatSim(data.pidIndex,safe=verify)
     data.run(sim)
     return sim
 
-# arg: 'pid'
-def run_pid(data):
-    from bbsim.roster import PIDStatSim
-    sim = PIDStatSim(data.pidIndex)
+# arg: -r pitching
+def player_pitching(data,verify):
+    from bbsim.player import PlayerPitchingStatSim
+    sim = PlayerPitchingStatSim(data.ppidIndex,safe=verify)
     data.run(sim)
     return sim
 
-# arg: 'posout'
-def run_posout(data):
-    from bbsim.roster import FposOutSim
-    sim = FposOutSim(data.pidIndex)
+# arg: -r position
+def player_position(data,verify):
+    from bbsim.player import PlayerPositionOutSim
+    sim = PlayerPositionOutSim(data.pidIndex,safe=verify)
     data.run(sim)
     return sim
 
-# arg: 'gamestat'
-def run_gamestat(data):
+# arg: -r hbatting
+def player_hand_batting(data,verify):
+    from bbsim.player_handed import HandedPlayerBattingStatSim
+    sim = HandedPlayerBattingStatSim(data.pidHandedIndex,safe=verify)
+    data.run(sim)
+    return sim
+
+# arg: -r hpitching
+def player_hand_pitching(data,verify):
+    from bbsim.player_handed import HandedPlayerPitchingStatSim
+    sim = HandedPlayerPitchingStatSim(data.ppidHandedIndex,safe=verify)
+    data.run(sim)
+    return sim
+
+###################################################[By Game]###################################################
+
+# arg: -g stats
+def game_stats(data,verify):
     from bbsim.games import GameStatSim
-    sim = GameStatSim(data.gidTeamIndex)
+    sim = GameStatSim(data.gidTeamIndex,safe=verify)
     data.run(sim)
     return sim
 
-# arg: 'gamescore'
-def run_gamescore(data):
-    from bbsim.games import ScoreSim
-    sim = ScoreSim(data.gidIndex)
+# arg: -g score
+def game_score(data,verify):
+    from bbsim.games import GameScoreSim
+    sim = GameScoreSim(data.gidIndex,safe=verify)
     data.run(sim)
     return sim
 
-# arg: 'mlb'
-def run_mlb(data):
+###################################################[By Season]###################################################
+
+# arg: -s stats
+def season_stats(data,verify):
     from bbsim.league import SeasonStatSim
-    sim = SeasonStatSim(data.yearIndex)
+    sim = SeasonStatSim(data.yearIndex,safe=verify)
     data.run(sim)
     return sim
 
-# arg: 'league'
-def run_league(data):
-    from bbsim.league import SeasonStatSim
-    sim = SeasonStatSim(data.leagueIndex)
-    data.run(sim)
-    return sim
-
-# arg: 'nopitcher-league'
-def run_npleague(data):
-    from bbsim.league import NPLeagueStatSim
-    sim = NPLeagueStatSim(data.leagueIndex)
-    data.run(sim)
-    return sim
-
-# arg: 'rpo'
-def run_RPO(data):
+# arg: -s rpo
+def season_rpo(data,verify):
     from bbsim.games import RPOSim
-    sim = RPOSim(data.yearIndex)
+    sim = RPOSim(data.yearIndex,safe=verify)
     data.run(sim)
     return sim
 
-# arg: 'runsperpa'
-def run_runsperpa(data):
-    from bbsim.games import RunsPerPASim
-    sim = RunsPerPASim(data.yearIndex)
+# arg: -s rppa
+def season_rppa(data,verify):
+    from bbsim.games import RPPASim
+    sim = RPPASim(data.yearIndex,safe=verify)
     data.run(sim)
     return sim
 
-# arg: 'rpo'
-def run_RPW(data):
+# arg: -s rpw
+def season_rpw(data,verify):
     from bbsim.games import RPWSim
-    sim = RPWSim(data.yearIndex)
+    sim = RPWSim(data.yearIndex,safe=verify)
     data.run(sim)
     return sim
 
-# arg: 'woba'
-def run_woba(data):
+###################################################[By League]###################################################
+
+# arg: -l stats
+def league_stats(data,verify):
+    from bbsim.league import SeasonStatSim
+    sim = SeasonStatSim(data.leagueIndex,safe=verify)
+    data.run(sim)
+    return sim
+
+# arg: -l nopitcher
+def league_nopitcher(data,verify):
+    from bbsim.league import NPLeagueStatSim
+    sim = NPLeagueStatSim(data.leagueIndex,safe=verify)
+    data.run(sim)
+    return sim
+
+###################################################[Calculations]###################################################
+
+# arg: -c woba
+def calc_woba(data,verify):
     import numpy as np
     import pandas as pd
     from bbsim.woba import REMSim,wOBAWeightSim
     from bbsim.league import SeasonStatSim
     yIndex = data.yearIndex
     # Sim Run Exp Matrix
-    rem = REMSim(yIndex)
+    rem = REMSim(yIndex,safe=verify)
     data.run(rem)
     # Sim wOBA linear weights
-    oba = wOBAWeightSim(yIndex,rem)
+    oba = wOBAWeightSim(yIndex,rem,safe=verify)
     data.run(oba)
     # Sim MLB Batting Stats
-    mlb = SeasonStatSim(yIndex)
+    mlb = SeasonStatSim(yIndex,safe=verify)
     data.run(mlb)
     # Calculate wOBA weights
     linear_weights = ['BB','HBP','S','D','T','HR']
@@ -118,48 +140,77 @@ def run_woba(data):
     return df
 
 
-def option_function(arg):
-    if arg == 'ppid':
-        return run_ppid
-    if arg == 'pid':
-        return run_pid
-    if arg == 'posout':
-        return run_posout
-    if arg == 'gamestat':
-        return run_gamestat
-    if arg == 'gamescore':
-        return run_gamescore
-    if arg == 'mlb':
-        return run_mlb
-    if arg == 'league':
-        return run_league
-    if arg == 'nopitcher-league':
-        return run_npleague
-    if arg == 'rpo':
-        return run_RPO
-    if arg == 'runsperpa':
-        return run_runsperpa
-    if arg == 'rpw':
-        return run_RPW
-    if arg == 'woba':
-        return run_woba
+###################################################[Tests]###################################################
 
-def main(arg):
-    if arg.endswith('-help'):
-        print(f"use one of the following options to simulate baseball stats: {VALID_CMDS}",file=sys.stderr)
-        return
-    if arg not in VALID_CMDS:
-        print(f"'{arg}' is not a valid option choice",file=sys.stderr)
-        return
+# arg: -t roster
+def test_roster(data,verify):
+    from bbsim.core.roster import RosterSim
+    sim = RosterSim(safe=verify)
+    data.run(sim)
+    return sim
 
-    data = seasonlib('bbdata.xml')
-    fn = option_function(arg)
-    out = fn(data)
-    if not sys.stdout.isatty():
-        out.to_csv(sys.stdout)
-        return
+# arg: -t handed
+def test_handed(data,verify):
+    from bbsim.core.handed import HandedRosterSim
+    sim = HandedRosterSim(safe=verify)
+    data.run(sim)
+    return sim
 
+
+
+######################################################################################################
 
 if __name__=='__main__':
-    arg = sys.argv[1]
-    main(arg)
+    import argparse
+    parser = argparse.ArgumentParser(description="Baseball Game Simulator")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('-r','--roster',choices=['batting','pitching','position','hbatting','hpitching'],help='Group by player')
+    group.add_argument('-g','--games',choices=['stats','score'],help='Group by games')
+    group.add_argument('-s','--season',choices=['stats','rpo','rppa','rpw'],help='Group by season')
+    group.add_argument('-l','--league',choices=['stats','nopitcher'],help='Group by league')
+    group.add_argument('-c','--calc',choices=['woba'],help='More complex calculation')
+    group.add_argument('-t','--test',choices=['roster','handed'],help='Run tests on simulators')
+    parser.add_argument('-v','--verify',action='store_true',help='Verify simulator with context files')
+    args = parser.parse_args()
+    data = seasonlib('bbdata.xml')
+    if args.roster != None:
+        if args.roster == 'batting':
+            sim = player_batting(data,args.verify)
+        elif args.roster == 'pitching':
+            sim = player_pitching(data,args.verify)
+        elif args.roster == 'position':
+            sim = player_position(data,args.verify)
+        elif args.roster == 'hbatting':
+            sim = player_hand_batting(data,args.verify)
+        elif args.roster == 'hpitching':
+            sim = player_hand_pitching(data,args.verify)
+    elif args.games != None:
+        if args.games == 'stats':
+            sim = game_stats(data,args.verify)
+        elif args.games == 'score':
+            sim = game_score(data,args.verify)
+    elif args.season != None:
+        if args.season == 'stats':
+            sim = season_stats(data,args.verify)
+        elif args.season == 'rpo':
+            sim = season_rpo(data,args.verify)
+        elif args.season == 'rppa':
+            sim = season_rppa(data,args.verify)
+        elif args.season == 'rpw':
+            sim = season_rpw(data,args.verify)
+    elif args.league != None:
+        if args.league == 'stats':
+            sim = league_stats(data,args.verify)
+        elif args.league == 'nopitcher':
+            sim = league_nopitcher(data,args.verify)
+    elif args.calc != None:
+        if args.calc == 'woba':
+            sim = calc_woba(data,args.verify)
+    elif args.test != None:
+        if args.test == 'roster':
+            sim = test_roster(data,args.verify)
+        elif args.test == 'handed':
+            sim = test_handed(data,args.verify)
+
+    if not sys.stdout.isatty():
+        sim.to_csv(sys.stdout)

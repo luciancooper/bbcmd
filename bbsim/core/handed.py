@@ -1,5 +1,6 @@
 from . import BBSimError
 from .roster import RosterSim
+from pyutil.core import zipmap
 
 class HandedRosterSim(RosterSim):
     def __init__(self,**kwargs):
@@ -28,8 +29,6 @@ class HandedRosterSim(RosterSim):
         self.phand[0] = self.phlookup[self.teams[0],self.fpos[0][0]] # Away starting pitcher
         self.phand[1] = self.phlookup[self.teams[1],self.fpos[1][0]] # Home starting Pitcher
 
-
-
     #------------------------------- [Season] -------------------------------#
 
     def initSeason(self,data):
@@ -44,11 +43,12 @@ class HandedRosterSim(RosterSim):
     #------------------------------- [Properties] -------------------------------#
 
     def _padj(self,l):
-        pass
+        # l[self.ADJ['hand']]
+        self.adjflag[0] = int(l[1])
 
     def _badj(self,l):
-        pass
-
+        #print(f"badj l:{l} index:{1}")
+        self.adjflag[1] = int(l[1])
 
     #------------------------------- [phand & bhand] -------------------------------#
 
@@ -58,8 +58,8 @@ class HandedRosterSim(RosterSim):
         if self.adjflag[0]!=None:
             return self.adjflag[0]
         if self.phand[self.dt] == 2:
-            raise BBSimError("Switch Pitcher Hand is Unknown")
-        return self.phand[self.df]
+            raise BBSimError(self.gameid,self.eid,"Switch Pitcher Hand is Unknown")
+        return self.phand[self.dt]
 
     @property
     def _bhand_(self):
@@ -69,7 +69,8 @@ class HandedRosterSim(RosterSim):
         hand = self.bhand[self.t][self._lpos_]
         if hand < 2:
             return hand
-        raise BBSimError("Dont Know what to assume when it comes to switch hitters")
+        return self._phand_ ^ 1
+        #raise BBSimError(self.gameid,self.eid,"Dont Know what to assume when it comes to switch hitters")
 
     #------------------------------- [resp-hands] -------------------------------#
 
@@ -89,8 +90,17 @@ class HandedRosterSim(RosterSim):
         """Cycles to the next batter"""
         super()._cycle_lineup()
         self.adjflag[:] = None,None
+        self.resphand[:] = None,None
 
     #------------------------------- [Substitution] -------------------------------#
+
+    def _cache_resp_pitcher(self):
+        self.resphand[0] = self._phand_
+        self.rpid[0] = self._ppid_
+
+    def _cache_resp_batter(self):
+        self.resphand[1] = self._bhand_
+        self.rpid[1] = self._bpid_
 
     def _sub(self,l):
         """Performs linup substitution"""
@@ -104,44 +114,48 @@ class HandedRosterSim(RosterSim):
                     for i,b in zipmap(self._bitindexes(self.bflg),self.base):
                         if b[0]==runner: break
                     else:
-                        raise BBSimError(self.gameid,self._str_ctx_,'pinchrun error [%s] not on base'%runner)
+                        raise BBSimError(self.gameid,self.eid,'pinchrun error [%s] not on base'%runner)
                     self.base[i] = (pid,self.base[i][1])
                 else:
                     if self._lpos_!=lpos:
-                        raise BBSimError(self.gameid,self._str_ctx_,'Pinchit Discrepancy _lpos_[{}] lpos[{}]'.format(self._lpos_,lpos))
+                        raise BBSimError(self.gameid,self.eid,'Pinchit Discrepancy _lpos_[{}] lpos[{}]'.format(self._lpos_,lpos))
                     if count!='' and count[1]=='2':
-                        self.resphand[1] = self._bhand_
-                        self.rpid[1] = self._bpid_
+                        self._cache_resp_batter()
                 self.fpos[t][self.lpos[t][lpos]] = pid
-
+                self.bhand[t][lpos] = self.bhlookup[self.teams[t],pid]
+                if self.lpos[t][lpos] == 0:
+                    self.phand[t] = self.phlookup[self.teams[t],pid]
             else:
                 if (lpos>=0):
                     self.lpos[t][lpos] = fpos
+                    self.bhand[t][lpos] = self.bhlookup[self.teams[t],pid]
                 self.fpos[t][fpos] = pid
+                if fpos==0:
+                    self.phand[t] = self.phlookup[self.teams[t],pid]
         else:
-            if fpos>9:raise BBSimError(self.gameid,self._str_ctx_,'defensive pinch sub [%i]'%fpos)
+            if fpos>9:raise BBSimError(self.gameid,self.eid,'defensive pinch sub [%i]'%fpos)
+            if fpos==0 and count in ['20','21','30','31','32']:
+                self._cache_resp_pitcher()
             if (lpos>=0):
                 self.lpos[t][lpos] = fpos
-                self.bhand[t][lpos] = self.phlookup[self.teams[t],pid]
-            if fpos==0 and count in ['20','21','30','31','32']:
-                self.resphand[0] = self._phand_
-                self.rpid[0] = self._ppid_
+                self.bhand[t][lpos] = self.bhlookup[self.teams[t],pid]
+
 
             self.fpos[t][fpos] = pid
             if fpos==0:
                 self.phand[t] = self.phlookup[self.teams[t],pid]
-
-
-
+    
     #------------------------------- [verify] -------------------------------#
 
     def _verify(self,l,ctx):
         super()._verify(l,ctx)
         # int(ctx[self.CTX['bhand']]) # int(ctx[self.CTX['phand']]) # int(ctx[self.CTX['rbhand']]) # int(ctx[self.CTX['rphand']])
-        bhand,phand,rbhand,rphand = (int(x) for x in ctx[self.CTX['hand']])
-        if (self._bhand_ != bhand) or (self._phand_ != phand) or (self._rbhand_ != rbhand) or (self._rphand_ != rphand):
-            raise BBSimError(self.gameid,self._str_ctx_,'hand error -> bhand({self._bhand_}:{bhand}) phand({self._phand_}:{phand}) rbhand({self._rbhand_}:{rbhand}) rphand({self._rphand_}:{rphand})')
-
+        e = int(l[self.EVENT['code']])
+        _bhand,_phand,_rbhand,_rphand = (int(x) for x in ctx[self.CTX['hand']])
+        bhand,phand = self._bhand_,self._phand_
+        rbhand,rphand = (self._rbhand_ if e==2 else bhand),(self._rphand_ if e in [3,4] else phand)
+        if (bhand != _bhand) or (phand != _phand) or (rbhand != _rbhand) or (rphand != _rphand):
+            raise BBSimError(self.gameid,self.eid,f"hand error -> bhand({bhand}:{_bhand}) phand({phand}:{_phand}) rbhand({rbhand}:{_rbhand}) rphand({rphand}:{_rphand})")
 
 
 

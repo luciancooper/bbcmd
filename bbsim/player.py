@@ -54,7 +54,7 @@ class RosterStatSim(StatSim,RosterSim):
 #                                         FposOutSim                                                      #
 ###########################################################################################################
 
-class FposOutSim(RosterStatSim):
+class PlayerPositionOutSim(RosterStatSim):
     _prefix_ = "POS"
     dcols = SeqIndex(['P','C','1B','2B','3B','SS','LF','CF','RF','DH'])
 
@@ -70,7 +70,7 @@ class FposOutSim(RosterStatSim):
 #                                         PIDStatSim                                                      #
 ###########################################################################################################
 
-class PIDStatSim(RosterStatSim):
+class PlayerBattingStatSim(RosterStatSim):
 
     _prefix_ = "PID"
     dcols = SeqIndex(['PA','AB','S','D','T','HR','BB','IBB','HBP','K','I','SH','SF','R','RBI','GDP']+['SB','CS','PO']+['P','A','E'])
@@ -91,12 +91,16 @@ class PIDStatSim(RosterStatSim):
             self._stat(self.dt,self.fpos[self.dt][int(i)-1],'E')
 
     #------------------------------- [play] -------------------------------#
-
-    def scorerun(self,pid,ppid,flag):
-        super().scorerun(pid,ppid,flag)
-        self._stat(self.t,pid,'R')
+    # runner_pid: the runner who is scoring
+    # runner_ppid: the pitcher responsible for putting the runner on base
+    # resp_batter: the responsible batter for RBI credits
+    # resp_pitcher: the currently responsible pitcher not used here
+    def scorerun(self,flag,runner_pid,runner_ppid,resp_batter,resp_pitcher):
+        super().scorerun(flag,runner_pid,runner_ppid,resp_batter,resp_pitcher)
+        self._stat(self.t,runner_pid,'R')
         er,ter,rbi = (int(x) for x in flag[1:])
-        if rbi: self._stat(self.t,self._bpid_,'RBI')
+        if rbi:
+            self._stat(self.t,resp_batter,'RBI')
 
     def _event(self,l):
         self._stats_defense(*l[self.EVENT['dfn']])
@@ -144,20 +148,24 @@ class PIDStatSim(RosterStatSim):
 ###########################################################################################################
 #                                         PPIDStatSim                                                     #
 ###########################################################################################################
-"""
-frameIndex(years)
-"""
-class PPIDStatSim(RosterStatSim):
+
+class PlayerPitchingStatSim(RosterStatSim):
     dcols = SeqIndex(['W','L','SV','IP','BF','R','ER','S','D','T','HR','BB','HBP','IBB','K','BK','WP','PO','GDP'])
 
     _prefix_ = "PPID"
     #------------------------------- [play] -------------------------------#
 
-    def scorerun(self,pid,ppid,flag):
-        super().scorerun(pid,ppid,flag)
-        self._stat(self.dt,self._ppid_,'R')
+    # runner_pid: the runner who is scoring
+    # runner_ppid: the pitcher responsible for putting the runner on base (for charging earned runs)
+    # resp_batter: the currently responsible batter not used here
+    # resp_pitcher: the currently responsible pitcher used for run credits
+    def scorerun(self,flag,runner_pid,runner_ppid,resp_batter,resp_pitcher):
+        super().scorerun(flag,runner_pid,runner_ppid,resp_batter,resp_pitcher)
+        #self._stat(self.dt,self._ppid_,'R')
+        self._stat(self.dt,resp_pitcher,'R')
         er,ter,rbi = (int(x) for x in flag[1:])
-        if er: self._stat(self.dt,ppid,'ER')
+        if er:
+            self._stat(self.dt,runner_ppid,'ER')
 
     def outinc(self):
         super().outinc()
