@@ -84,7 +84,39 @@ class HandedRosterSim(RosterSim):
         """responsible batter hand"""
         return self.resphand[1] if (self.rpid[1]!=None) else self._bhand_
 
+    #------------------------------- [resp-hands](event) -------------------------------#
+
+    def resp_bhand(self,ecode):
+        if ecode == 2 and self.resphand[1]!=None:
+            return self.resphand[1]
+        if self.adjflag[1]!=None:
+            return self.adjflag[1]
+        hand = self.bhand[self.t][self._lpos_]
+        if hand < 2:
+            return hand
+        return self.resp_phand(ecode) ^ 1
+
+
+    def resp_phand(self,ecode):
+        if (ecode == 3 or ecode == 4) and self.resphand[0]!=None:
+            return self.resphand[0]
+        if self.adjflag[0]!=None:
+            return self.adjflag[0]
+        if self.phand[self.dt] == 2:
+            raise BBSimError(self.gameid,self.eid,"Switch Pitcher Hand is Unknown")
+        return self.phand[self.dt]
+
+
+
+
+
+
+
     #------------------------------- [batting-order] -------------------------------#
+
+    def _cycle_inning(self):
+        self.adjflag[:] = None,None
+        return super()._cycle_inning()
 
     def _cycle_lineup(self):
         """Cycles to the next batter"""
@@ -144,7 +176,18 @@ class HandedRosterSim(RosterSim):
             self.fpos[t][fpos] = pid
             if fpos==0:
                 self.phand[t] = self.phlookup[self.teams[t],pid]
-    
+
+    #------------------------------- [Event] -------------------------------#
+
+    def _event(self,l): #e,adv,bpid
+        code = int(l[self.EVENT['code']])
+        bpid,ppid = self.resp_bpid(code),self.resp_ppid(code)
+        bhand,phand = self.resp_bhand(code),self.resp_phand(code)
+        if self._advance(l[self.EVENT['badv']],l[self.EVENT['radv']],self._bpid_,ppid,bpid,ppid,bhand,phand):
+            self._cycle_lineup()
+        if self.o==3:
+            self._cycle_inning()
+
     #------------------------------- [verify] -------------------------------#
 
     def _verify(self,l,ctx):
@@ -153,10 +196,18 @@ class HandedRosterSim(RosterSim):
         e = int(l[self.EVENT['code']])
         _bhand,_phand,_rbhand,_rphand = (int(x) for x in ctx[self.CTX['hand']])
         bhand,phand = self._bhand_,self._phand_
-        rbhand,rphand = (self._rbhand_ if e==2 else bhand),(self._rphand_ if e in [3,4] else phand)
+        rbhand,rphand = self.resp_bhand(e),self.resp_phand(e)
         if (bhand != _bhand) or (phand != _phand) or (rbhand != _rbhand) or (rphand != _rphand):
-            raise BBSimError(self.gameid,self.eid,f"hand error -> bhand({bhand}:{_bhand}) phand({phand}:{_phand}) rbhand({rbhand}:{_rbhand}) rphand({rphand}:{_rphand})")
-
+            bpid,rbpid = self._bpid_,(self._rbpid_ if e==2 else self._bpid_)
+            ppid,rppid = self._ppid_,(self._rppid_ if e in [3,4] else self._ppid_)
+            _bpid,_rbpid = ctx[self.CTX['bpid']],ctx[self.CTX['rbpid']]
+            _ppid,_rppid = ctx[self.CTX['ppid']],ctx[self.CTX['rppid']]
+            blook = self.bhlookup[self.teams[self.t],bpid]
+            rblook = self.bhlookup[self.teams[self.t],rbpid]
+            line1 = f"Player IDS: batter:({bpid}<{blook}>|{rbpid}<{rblook}>)({_bpid}|{_rbpid}) pitcher:({ppid}|{rppid})({_ppid}|{_rppid})"
+            line2 = f"Hands: bhand({bhand}:{_bhand}) rbhand({rbhand}:{_rbhand}) phand({phand}:{_phand}) rphand({rphand}:{_rphand})"
+            print(f"\n[{self.gameid}-{self.eid:03}]\n{line1}\n{line2}\n\n")
+            #raise BBSimError(self.gameid,self.eid,line1,line2)
 
 
     #------------------------------- [str] -------------------------------#

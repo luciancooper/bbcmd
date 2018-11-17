@@ -44,7 +44,7 @@ class RosterSim(GameSim):
             self.lpos[0][x],self.lpos[1][x] = int(a[-1]),int(h[-1])
             self.fpos[0][int(a[-1])],self.fpos[1][int(h[-1])] = a[:8],h[:8]
 
-    #------------------------------- [Properties] -------------------------------#
+    #------------------------------- [Batter & Pitcher] -------------------------------#
 
     @property
     def _ppid_(self):
@@ -52,25 +52,38 @@ class RosterSim(GameSim):
         return self.fpos[self.t^1][0]
 
     @property
+    def _bpid_(self):
+        """batter id"""
+        return self.fpos[self.t][self.lpos[self.t][self._lpos_]]
+
+    #------------------------------- (Resp)[Batter & Pitcher] -------------------------------#
+
+    @property
     def _rppid_(self):
         """responsible pitcher id"""
         return self.rpid[0] if (self.rpid[0]!=None) else self._ppid_
+
+    @property
+    def _rbpid_(self):
+        """responsible batter id"""
+        return self.rpid[1] if (self.rpid[1]!=None) else self._bpid_
+
+    def resp_bpid(self,ecode):
+        if ecode == 2:
+            return self._rbpid_
+        return self._bpid_
+
+    def resp_ppid(self,ecode):
+        if ecode == 3 or ecode == 4:
+            return self._rppid_
+        return self._ppid_
+
     #------------------------------- [batting-order] -------------------------------#
 
     @property
     def _lpos_(self):
         """lineup position of batter"""
         return self.boot[self.t][-1] if self.bootflg[self.t] else self.abinx[self.t]
-
-    @property
-    def _bpid_(self):
-        """batter id"""
-        return self.fpos[self.t][self.lpos[self.t][self._lpos_]]
-
-    @property
-    def _rbpid_(self):
-        """responsible batter id"""
-        return self.rpid[1] if (self.rpid[1]!=None) else self._bpid_
 
     @property
     def _bpid_fpos_(self):
@@ -81,6 +94,8 @@ class RosterSim(GameSim):
     def def_fpos(self):
         """Returns the fpos of team currently on defense"""
         return self.fpos[self.dt]
+
+    #------------------------------- [batting out of order] -------------------------------#
 
     def _boot(self,l):
         """handles the rare case of when a team bats out of order"""
@@ -188,16 +203,13 @@ class RosterSim(GameSim):
 
     def _event(self,l): #e,adv,bpid
         code = int(l[self.EVENT['code']])
-        if code == 3 or code == 4:
-            bpid,ppid = self._bpid_,self._rppid_
-        elif code == 2:
-            bpid,ppid = self._rbpid_,self._ppid_
-        else:
-            bpid,ppid = self._bpid_,self._ppid_
+        bpid,ppid = self.resp_bpid(code),self.resp_ppid(code)
         if self._advance(l[self.EVENT['badv']],l[self.EVENT['radv']],self._bpid_,ppid,bpid,ppid):
             self._cycle_lineup()
         if self.o==3:
             self._cycle_inning()
+
+
 
 
     #------------------------------- [verify] -------------------------------#

@@ -67,8 +67,8 @@ class HandedPlayerBattingStatSim(HandedRosterStatSim):
     def _event(self,l):
         evt,code = l[self.EVENT['evt']],int(l[self.EVENT['code']])
         e = evt.split('+')
-        bpid,bhand = (self._rbpid_,self._rbhand_) if (code == 2) else (self._bpid_,self._bhand_)
-        ppid,phand = (self._rppid_,self._rphand_) if (code == 3 or code == 4) else (self._ppid_,self._phand_)
+        bpid,bhand = self.resp_bpid(code),self.resp_bhand(code)
+        ppid,phand = self.resp_ppid(code),self.resp_phand(code)
         if code<=10:
             # (0,1) (2,3,4) (5,6,7,8,9,10)
             if code<=1:
@@ -109,8 +109,8 @@ class HandedPlayerPitchingStatSim(HandedRosterStatSim):
     def _event(self,l):
         evt,code = l[self.EVENT['evt']],int(l[self.EVENT['code']])
         e = evt.split('+')
-        bpid,bhand = (self._rbpid_,self._rbhand_) if (code == 2) else (self._bpid_,self._bhand_)
-        ppid,phand = (self._rppid_,self._rphand_) if (code == 3 or code == 4) else (self._ppid_,self._phand_)
+        bpid,bhand = self.resp_bpid(code),self.resp_bhand(code)
+        ppid,phand = self.resp_ppid(code),self.resp_phand(code)
 
         if code<=10:
             # (0,1) (2,3,4) (5,6,7,8,9,10)
@@ -143,6 +143,7 @@ class HandedPlayerPitchingStatSim(HandedRosterStatSim):
                 pass
         elif code==16: #BLK
             self._stat(self.dt,ppid,(phand,bhand),e[0])
+        
         if self._advance(l[self.EVENT['badv']],l[self.EVENT['radv']],self._bpid_,ppid,bpid,ppid,bhand,phand):
             self._cycle_lineup()
         if self.o==3:
