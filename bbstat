@@ -21,12 +21,7 @@ def player_pitching(data,verify):
     data.run(sim)
     return sim
 
-# arg: -r position
-def player_position(data,verify):
-    from bbsim.player import PlayerPositionOutSim
-    sim = PlayerPositionOutSim(data.pidIndex,safe=verify)
-    data.run(sim)
-    return sim
+
 
 # arg: -r hbatting
 def player_hand_batting(data,verify):
@@ -104,7 +99,38 @@ def league_nopitcher(data,verify):
     data.run(sim)
     return sim
 
+###################################################[Appearance]###################################################
+
+# arg: -a normal
+def appearance_normal(data,verify):
+    from bbsim.appearance import AppearanceSim
+    sim = AppearanceSim(data.pidIndex,safe=verify)
+    data.run(sim)
+    return sim
+
+# arg: -a lahman
+def appearance_lahman(data,verify):
+    from bbsim.appearance import LahmanAppearanceSim
+    sim = LahmanAppearanceSim(data.pidIndex,safe=verify)
+    data.run(sim)
+    return sim
+
+# arg: -a position
+def appearance_position(data,verify):
+    from bbsim.player import PlayerPositionOutSim
+    sim = PlayerPositionOutSim(data.pidIndex,safe=verify)
+    data.run(sim)
+    return sim
+
+# arg: -a simple
+def appearance_gappear(data,verify):
+    from bbsim.gappear import GAppearanceSim
+    sim = GAppearanceSim(data.pidIndex,safe=verify)
+    data.run(sim)
+    return sim
+
 ###################################################[Calculations]###################################################
+
 
 # arg: -c woba
 def calc_woba(data,verify):
@@ -139,6 +165,58 @@ def calc_woba(data,verify):
     print(df,file=sys.stderr)
     return df
 
+# arg: -c war
+def calc_war(data,verify):
+    ### INCOMPLETE #####
+    import numpy as np
+    import pandas as pd
+    from bbsim.woba import REMSim,wOBAWeightSim
+    from bbsim.league import SeasonStatSim,NPLeagueStatSim
+
+    yIndex = data.yearIndex
+    # Sim Run Exp Matrix
+    rem = REMSim(yIndex,safe=verify)
+    data.run(rem)
+    # Sim wOBA linear weights
+    oba = wOBAWeightSim(yIndex,rem,safe=verify)
+    data.run(oba)
+    # Sim MLB Batting Stats
+    mlb = SeasonStatSim(yIndex,safe=verify)
+    data.run(mlb)
+
+    # Sim Non Pitcher League Batting Stats
+    lgue = NPLeagueStatSim(data.leagueIndex)
+    data.run(lgue)
+
+    # Calculate wOBA weights
+    linear_weights = ['BB','HBP','S','D','T','HR']
+
+    # Calc adjusted linear weights
+    adjlw = oba.adjWeights()
+    # League OBP (On Base Percentage)
+    obp = mlb['(S+D+T+HR+BB+HBP)/(AB+BB+HBP+SF)']
+    # League wOBA
+    woba = (mlb[linear_weights]*adjlw[linear_weights].values).sum(axis=1,keepdims=True)/mlb['AB+BB+SF+HBP']
+    # wOBA Scale
+    woba_scale = obp / woba
+    # Final wOBA linear weights
+    lw = adjlw.values * woba_scale
+
+    # DataFrame container linear weights
+    #df = pd.DataFrame(np.c_[woba,woba_scale,lw],index=inx.pandas(),columns=['woba','woba_Scale']+linear_weights)
+    df_lw = pd.DataFrame(lw,index=yIndex.pandas(),columns=linear_weights)
+
+    lg_df = lgue.df()
+    # [BB,HBP,S,D,T,HR]
+    (lg_df[linear_weights].groupby('league').apply(lambda x: x * df_lw)).sum(axis=1)
+    lg_woba = lgue[linear_weights]
+    lgue['AB+BB+SF+HBP']
+
+    R_PA = mlb["R/PA"]
+    print(df,file=sys.stderr)
+    return df
+
+
 
 ###################################################[Tests]###################################################
 
@@ -164,11 +242,12 @@ if __name__=='__main__':
     import argparse
     parser = argparse.ArgumentParser(description="Baseball Game Simulator")
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('-r','--roster',choices=['batting','pitching','position','hbatting','hpitching'],help='Group by player')
+    group.add_argument('-r','--roster',choices=['batting','pitching','hbatting','hpitching'],help='Group by player')
     group.add_argument('-g','--games',choices=['stats','score'],help='Group by games')
     group.add_argument('-s','--season',choices=['stats','rpo','rppa','rpw'],help='Group by season')
     group.add_argument('-l','--league',choices=['stats','nopitcher'],help='Group by league')
     group.add_argument('-c','--calc',choices=['woba'],help='More complex calculation')
+    group.add_argument('-a','--appearance',choices=['position','simple','normal','lahman'],help='Calculate each players appearance in each game')
     group.add_argument('-t','--test',choices=['roster','handed'],help='Run tests on simulators')
     parser.add_argument('-v','--verify',action='store_true',help='Verify simulator with context files')
     args = parser.parse_args()
@@ -178,8 +257,6 @@ if __name__=='__main__':
             sim = player_batting(data,args.verify)
         elif args.roster == 'pitching':
             sim = player_pitching(data,args.verify)
-        elif args.roster == 'position':
-            sim = player_position(data,args.verify)
         elif args.roster == 'hbatting':
             sim = player_hand_batting(data,args.verify)
         elif args.roster == 'hpitching':
@@ -206,6 +283,15 @@ if __name__=='__main__':
     elif args.calc != None:
         if args.calc == 'woba':
             sim = calc_woba(data,args.verify)
+    elif args.appearance != None:
+        if args.appearance == 'normal':
+            sim = appearance_normal(data,args.verify)
+        elif args.appearance == 'lahman':
+            sim = appearance_lahman(data,args.verify)
+        elif args.appearance == 'position':
+            sim = appearance_position(data,args.verify)
+        elif args.appearance == 'simple':
+            sim = appearance_gappear(data,args.verify)
     elif args.test != None:
         if args.test == 'roster':
             sim = test_roster(data,args.verify)

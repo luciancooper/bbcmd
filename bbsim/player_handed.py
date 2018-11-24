@@ -143,7 +143,7 @@ class HandedPlayerPitchingStatSim(HandedRosterStatSim):
                 pass
         elif code==16: #BLK
             self._stat(self.dt,ppid,(phand,bhand),e[0])
-        
+
         if self._advance(l[self.EVENT['badv']],l[self.EVENT['radv']],self._bpid_,ppid,bpid,ppid,bhand,phand):
             self._cycle_lineup()
         if self.o==3:

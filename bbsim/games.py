@@ -198,7 +198,7 @@ class RPWSim(StatSim):
         return pd.Series(rpw,index=self.index.pandas(),name='R/W')
 
     def _iter_csv(self):
-        yield '%s,R/W'%','.join(str(x) for x in self.index.ids
+        yield '%s,R/W'%','.join(str(x) for x in self.index.ids)
         for inx,data in zip(self.index,self.matrix):
             rpw = 9 * (data[0] / (data[1] / 2)) * 1.5 + 3
             yield '%s,%s'%(','.join(str(x) for x in inx),str(rpw))

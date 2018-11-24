@@ -49,7 +49,7 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(description="Retrosheet Source Downloader")
     parser.add_argument('years',type=parse_years,help='years to download data for')
-    parser.add_argument('outdir',nargs='?',default=os.getcwd(),help='path to download files to')
+    parser.add_argument('outdir',nargs='?',default=os.getcwd(),help='path to download files to, if not specified, current directory is used')
     parser.add_argument('-w','--wipe',action='store_true',help='Wipe path before downloading')
     args = parser.parse_args()
     #print(args)

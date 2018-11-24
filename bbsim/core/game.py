@@ -50,6 +50,7 @@ class GameSim():
     #POS = ('P','C','1B','2B','3B','SS','LF','CF','RF','DH','PH','PR')
     POS = ('P','C','1B','2B','3B','SS','LF','CF','RF','DH')
     FPOS = {'P':0,'C':1,'1B':2,'2B':3,'3B':4,'SS':5,'LF':6,'CF':7,'RF':8,'DH':9}
+    _FPOS = ['P','C','1B','2B','3B','SS','LF','CF','RF','DH','PH','PR']
     PINCH = ('PH','PR')
     #E,###,evt,code,mod,ra,ra,ra,ra,assist,putout,error
 

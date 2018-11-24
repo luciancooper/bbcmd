@@ -3,15 +3,13 @@
 import sys
 sys.path.append('/Users/luciancooper/projects/pymodule')
 
-VALID_CMDS = ['fg-players','fg-advbat','fg-parkfactors']
-
-# arg: 'fg-players'
+# arg: '-f players'
 def fg_players():
     from bbsource.scrape.fg import playerTable
     for l in playerTable(bar=True):
         print(l,file=sys.stdout)
 
-# arg: 'fg-advbat instructionfile [startline]'
+# arg: '-f advbat -i _file_'
 def fg_advbat(*args):
     from bbsource.scrape.fg import scrapeAdvancedBatting
     try:
@@ -20,47 +18,61 @@ def fg_advbat(*args):
     except Exception as e:
         print(e,file=sys.stderr)
 
-
-def _parse_yeararg(arg):
-    if '-' in arg:
-        y0,y1 = arg.split('-')
-        return [*range(int(y0),int(y1)+1)]
-    return [int(arg)]
-
-# arg: 'fg-parkfactors years'
-def fg_parkfactor(*args):
+# arg: '-f parkfactors -y _
+def fg_parkfactor(years):
     from bbsource.scrape.fg import scrapeParkFactors
     try:
-        years = [a for b in [_parse_yeararg(arg) for arg in args] for a in b]
         for l in scrapeParkFactors(years,bar=True):
             print(l,file=sys.stdout)
     except Exception as e:
         print(e,file=sys.stderr)
 
 
-def main(arg,*args):
-    if arg.endswith('-help'):
-        print(f"use one of the following options to scrape baseball data: {VALID_CMDS}",file=sys.stderr)
-        return
-    if arg not in VALID_CMDS:
-        print(f"'{arg}' is not a valid option choice",file=sys.stderr)
-        return
+# arg: --spotrac [_ ]
+def spotrac_salary(start):
+    from bbsource.scrape.spotrac import scrape_salary
+    scrape_salary(start)
 
-    if arg == 'fg-players':
+
+
+### Parse Years
+def parse_range(arg):
+    y0,y1 = arg.split('-')
+    return range(int(y0),int(y1)+1)
+
+def parse_years(arg):
+    return [i for j in [[*parse_range(a)] if ('-' in a) else [int(a)] for a in arg.split(',')] for i in j]
+
+
+def parseifint(arg):
+    if arg.isnumeric():
+        return int(arg)
+    return arg
+
+def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Baseball Data Web Scraper")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--fgplayers',action='store_const',const=True,help='Scrape Players from Fangraphs Site')
+    group.add_argument('--fgadvbat',nargs='+',type=parseifint,help='Scrape adv batting from fangraphs')
+    #parser.add_argument('-i','--i',dest='fgadvbat',type=int,action='append',nargs='?',const=0,help='Start index for advbat input file')
+    group.add_argument('--parkfactor',type=parse_years,help="Scrape parkfactors from fangraphs for the given years")
+    group.add_argument('--spotrac',nargs='?',const=0,type=int,help='Scrape Salary Data from Spotrac')
+
+    args = parser.parse_args()
+    print(args)
+    if args.fgplayers == True:
         fg_players()
-    elif arg == 'fg-advbat':
-        if len(args)== 0:
-            print('Need to provide path to instruction file',file=sys.stderr)
-            return
-        fg_advbat(*args)
-    elif arg == 'fg-parkfactors':
-        if len(args) == 0:
-            print('Need to provide years',file=sys.stderr)
-            return
-        fg_parkfactor(*args)
+    elif args.fgadvbat != None:
+        fg_advbat(*args.fgadvbat)
+    elif args.parkfactor != None:
+        fg_parkfactor(args.parkfactor)
+    elif args.spotrac != None:
+        spotrac_salary(args.spotrac)
+
+
 
 
 
 if __name__=='__main__':
-    arg = sys.argv[1]
-    main(arg,*sys.argv[2:])
+    main()
