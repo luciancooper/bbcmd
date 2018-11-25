@@ -1,7 +1,6 @@
 
-from . import BBSimError
+from . import BBSimError,zipmap
 from .game import GameSim
-from pyutil.core import zipmap
 
 ###########################################################################################################
 #                                             RosterSim                                                   #

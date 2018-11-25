@@ -1,6 +1,6 @@
 from .http import simple_get
 from bs4 import BeautifulSoup
-from progress import IncrementalBar
+from cmdtools.progress import IncrementalBar
 import re
 
 

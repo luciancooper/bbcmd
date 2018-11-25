@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import arrpy
 import pandas as pd
 import numpy as np
 from .util import BBMatrixError

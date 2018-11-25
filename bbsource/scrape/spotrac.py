@@ -2,7 +2,7 @@
 from .http import simple_get
 from bs4 import BeautifulSoup
 import pandas as pd
-from progress import IncrementalBar
+from cmdtools.progress import IncrementalBar
 import re
 
 

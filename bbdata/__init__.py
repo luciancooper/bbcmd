@@ -1,2 +1,0 @@
-
-from .salary import *

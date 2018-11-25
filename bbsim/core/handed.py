@@ -1,6 +1,5 @@
-from . import BBSimError
+from . import BBSimError,zipmap
 from .roster import RosterSim
-from pyutil.core import zipmap
 
 class HandedRosterSim(RosterSim):
     def __init__(self,**kwargs):

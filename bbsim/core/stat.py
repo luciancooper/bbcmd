@@ -11,7 +11,7 @@ from bbmatrix.core import BBMatrix
 class StatSim(GameSim):
 
     dtype = 'u2'
-    
+
     def __init__(self,index,**kwargs):
         super().__init__(**kwargs)
         self.index = index
