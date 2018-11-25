@@ -1,9 +1,8 @@
 import numpy as np
 import pandas as pd
 from arrpy.inx import SeqIndex
-from .core.stat import StatSim
-from bbmatrix.core import BBMatrix
-#from .stats import RosterStatSim,SeasonStatSim
+from .stat import StatSim
+from .matrix.core import BBMatrix
 
 ###########################################################################################################
 #                                          GameStatSim                                                    #

@@ -1,8 +1,7 @@
 import re
-from .game import GameSim
 import pandas as pd
-from bbmatrix.core import BBMatrix
-
+from .core.game import GameSim
+from .matrix.core import BBMatrix
 
 ###########################################################################################################
 #                                             RosterSim                                                   #

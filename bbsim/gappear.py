@@ -1,7 +1,7 @@
 
 from arrpy.inx import SeqIndex
 from .core import BBSimError,zipmap
-from .core.stat import StatSim
+from .stat import StatSim
 from .core.roster import RosterSim
 
 

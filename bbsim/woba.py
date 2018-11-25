@@ -2,8 +2,8 @@
 from arrpy.inx import SeqIndex
 import numpy as np
 import pandas as pd
-from .core.stat import StatSim
-from bbmatrix import BBMatrix,REMatrix
+from .stat import StatSim
+from .matrix import BBMatrix,REMatrix
 
 ###########################################################################################################
 #                                           REM Sim                                                       #

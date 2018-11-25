@@ -1,5 +1,5 @@
 from arrpy.inx import SeqIndex
-from .core.stat import StatSim
+from .stat import StatSim
 from .core.handed import HandedRosterSim
 
 class HandedRosterStatSim(StatSim,HandedRosterSim):

@@ -2,8 +2,8 @@
 import sys
 from arrpy.inx import SeqIndex
 import numpy as np
-from bbmatrix.core import BBMatrix
-from .core.stat import StatSim
+from .matrix.core import BBMatrix
+from .stat import StatSim
 from .core.roster import RosterSim
 
 ###########################################################################################################

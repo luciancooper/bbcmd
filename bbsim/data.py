@@ -1,7 +1,7 @@
 
 import xml.etree.ElementTree as etree
 from cmdtools.progress import MultiBar
-from bbindex import BBIndex,BBLookup
+from .index import BBIndex,BBLookup
 
 class seasonlib():
     def __init__(self,xmlfile):

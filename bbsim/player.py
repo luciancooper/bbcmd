@@ -1,6 +1,6 @@
 
 from arrpy.inx import SeqIndex
-from .core.stat import StatSim
+from .stat import StatSim
 from .core.roster import RosterSim
 
 ###########################################################################################################

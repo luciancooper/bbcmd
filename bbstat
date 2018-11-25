@@ -219,6 +219,13 @@ def calc_war(data,verify):
 
 ###################################################[Tests]###################################################
 
+# arg: -t game
+def test_game(data,verify):
+    from bbsim.core.game import GameSim
+    sim = GameSim(safe=verify)
+    data.run(sim)
+    return sim
+
 # arg: -t roster
 def test_roster(data,verify):
     from bbsim.core.roster import RosterSim
@@ -247,7 +254,7 @@ if __name__=='__main__':
     group.add_argument('-l','--league',choices=['stats','nopitcher'],help='Group by league')
     group.add_argument('-c','--calc',choices=['woba'],help='More complex calculation')
     group.add_argument('-a','--appearance',choices=['position','simple','normal','lahman'],help='Calculate each players appearance in each game')
-    group.add_argument('-t','--test',choices=['roster','handed'],help='Run tests on simulators')
+    group.add_argument('-t','--test',choices=['game','roster','handed'],help='Run tests on simulators')
     parser.add_argument('-v','--verify',action='store_true',help='Verify simulator with context files')
     args = parser.parse_args()
     data = seasonlib('bbdata.xml')
@@ -292,7 +299,9 @@ if __name__=='__main__':
         elif args.appearance == 'simple':
             sim = appearance_gappear(data,args.verify)
     elif args.test != None:
-        if args.test == 'roster':
+        if args.test == 'game':
+            sim = test_game(data,args.verify)
+        elif args.test == 'roster':
             sim = test_roster(data,args.verify)
         elif args.test == 'handed':
             sim = test_handed(data,args.verify)
