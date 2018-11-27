@@ -12,7 +12,7 @@ from .matrix import BBMatrix,REMatrix
 
 class REMSim(StatSim):
     _prefix_ = 'REM'
-    dcols = [*range(24)]
+    _dcol = [*range(24)]
     dtype = ('u2','u2')
 
     def __init__(self,index,paonly=False,**kwargs):
@@ -76,8 +76,9 @@ class wOBAWeightSim(StatSim):
     _prefix_ = 'wOBA'
 
     E_STR = ('O','E','K','BB','IBB','HBP','I','S','D','T','HR')#+('WP','PB','DI','OA','RUNEVT','BK','FLE')
-    dcols = SeqIndex(['O','E','K','BB','IBB','HBP','I','S','D','T','HR'])
-    #dcols = SeqIndex(['O','SH','SF','BB','IBB','HBP','I','S','D','T','HR'])
+
+    _dcol = ['O','E','K','BB','IBB','HBP','I','S','D','T','HR']
+    #_dcol = ['O','SH','SF','BB','IBB','HBP','I','S','D','T','HR']
     dtype = ('f4','u4')
     #statcode = [0,1,2,3,4,5,6,7,8,9,10] # BB(3)HBP(5)S(7)D(8)T(9)HR(10)
     def __init__(self,index,rem_data,**kwargs):

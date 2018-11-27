@@ -5,11 +5,24 @@ setup(
     version='1.0',
     description='Baseball command line tools',
     author='Lucian Cooper',
-    packages=['bbsim'],
+    packages=['bbsim','bbdata','cmdtools','arrpy'],
     install_requires=[
         'numpy',
         'pandas',
-
+        'array',
+        're',
+        'xml',
+        'os',
+        'collections',
+        'datetime',
+        'math',
+        'time',
     ],
-    scripts
+    entry_points={
+        'console_scripts': [
+            'bbsim = bbsim.__main__:main',
+            'bbdata = bbdata.__main__:main',
+            #'bbscrape = bbdata.scrape.__main__:main',
+        ]
+    },
 )

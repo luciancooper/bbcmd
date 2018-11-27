@@ -1,8 +1,6 @@
-#!/usr/bin/env python
-
 import sys
 
-from bbsim.data import seasonlib
+from .data import seasonlib
 
 ###################################################[By Player]###################################################
 

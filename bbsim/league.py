@@ -32,7 +32,7 @@ from .core.roster import RosterSim
 
 class SeasonStatSim(StatSim):
     _prefix_ = 'MLB'
-    dcols = SeqIndex(['R','PA','AB','O','E','SF','SH','K','BB','IBB','HBP','I','S','D','T','HR']+['SB','CS','PO'])
+    _dcol = ['R','PA','AB','O','E','SF','SH','K','BB','IBB','HBP','I','S','D','T','HR']+['SB','CS','PO']
     dtype = 'u4'
 
     def __new__(cls,index,**kwargs):
@@ -60,7 +60,7 @@ class SeasonStatSim(StatSim):
     #------------------------------- [stat] -------------------------------#
 
     def _stat(self,stat,inc=1):
-        j = self.dcols[stat]
+        j = self.icol(stat)
         self.matrix[self.yinx,j]+=inc
 
     #------------------------------- [stats] -------------------------------#
@@ -119,7 +119,7 @@ class LeagueStatSim(SeasonStatSim):
         super().__init__(index,**kwargs)
         #super(MLBStatSim,self).__init__(**kwargs)
         #self.matrix = matrix
-        self._data = np.zeros((2,len(self.dcols)),dtype=np.dtype(self.dtype))
+        self._data = np.zeros((2,self.ncol),dtype=np.dtype(self.dtype))
 
     #------------------------------- [sim](Year) -------------------------------#
 
@@ -136,7 +136,7 @@ class LeagueStatSim(SeasonStatSim):
     #------------------------------- [stat] -------------------------------#
 
     def _stat(self,stat,inc=1):
-        j = self.dcols[stat]
+        j = self.icol(stat)
         l = 0 if self.leagues[self.t] == 'A' else 1
         self._data[l,j] += inc
 

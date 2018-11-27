@@ -9,7 +9,7 @@ from .player import RosterStatSim
 
 
 class AppearanceSim(RosterStatSim):
-    dcols = SeqIndex(['G','GS','cGB','GB','GD','P','C','1B','2B','3B','SS','LF','CF','RF','DH','PH','PR'])
+    _dcol = ['G','GS','cGB','GB','GD','P','C','1B','2B','3B','SS','LF','CF','RF','DH','PH','PR']
 
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
@@ -200,7 +200,8 @@ class AppearanceSim(RosterStatSim):
 ###########################################################################################################
 
 class LahmanAppearanceSim(RosterStatSim):
-    dcols = SeqIndex(['G','GS','GB','GD','P','C','1B','2B','3B','SS','LF','CF','RF','DH','PH','PR'])
+    _dcol = ['G','GS','GB','GD','P','C','1B','2B','3B','SS','LF','CF','RF','DH','PH','PR']
+    
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
         # List of players who have been in the game

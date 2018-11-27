@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import sys
 from cmdtools import parse_years
 

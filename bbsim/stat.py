@@ -11,17 +11,25 @@ class StatSim(GameSim):
 
     dtype = 'u2'
 
+
     def __init__(self,index,**kwargs):
         super().__init__(**kwargs)
         self.index = index
-        m,n = len(index),len(self.dcols)
+        m,n = len(index),self.ncol
         self.matrix = BBMatrix((m,n),dtype=self.dtype)
 
+    @property
+    def ncol(self):
+        return len(self._dcol)
+
+    def icol(self,v):
+        i = self._dcol.index(v)
+        return i
 
     #------------------------------- [pandas] -------------------------------#
 
     def df(self,index=True,**args):
-        df = pd.DataFrame(self.matrix.np(),index=self.index.pandas(),columns=self.dcols.pandas())
+        df = pd.DataFrame(self.matrix.np(),index=self.index.pandas(),columns=self._dcol)
         if index==False:
             df.reset_index(inplace=True)
         return df
@@ -39,7 +47,7 @@ class StatSim(GameSim):
 
 
     def _iter_csv(self):
-        yield '%s,%s'%(','.join(str(x) for x in self.index.ids),','.join(str(x) for x in self.dcols))
+        yield '%s,%s'%(','.join(str(x) for x in self.index.ids),','.join(str(x) for x in self._dcol))
         for inx,data in zip(self.index,self.matrix):
             yield '%s,%s'%(','.join(str(x) for x in inx),','.join(str(x) for x in data))
 
@@ -49,8 +57,8 @@ class StatSim(GameSim):
     def __getitem__(self,key):
         if type(key) == str:
             if key.isalpha():
-                return self.matrix.cols([self.dcols[key]])
-            return evaluate_mathstring(key,lambda v: self.matrix.cols([self.dcols[v]]))
+                return self.matrix.cols([self.icol(key)])
+            return evaluate_mathstring(key,lambda v: self.matrix.cols([self.icol(v)]))
         if type(key) == list:
             if all(type(x)==str for x in key):
                 return self.matrix.cols(self.dcols.mapValues(key))

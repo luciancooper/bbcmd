@@ -39,14 +39,14 @@ class RosterStatSim(StatSim,RosterSim):
 
     def _stat(self,t,pid,stat,inc=1):
         #print(f"away [{self.awayleague},{self.awayteam}] home [{self.homeleague},{self.hometeam}]")
-        j = self.dcols[stat]
+        j = self.icol(stat)
         i = self.tinx[t][pid]
         self.matrix[i,j] += inc
 
     def _stats(self,t,pid,stats,inc=1):
         i = self.tinx[t][pid]
         for stat in stats:
-            j = self.dcols[stat]
+            j = self.icol(stat)
             self.matrix[i,j] += inc
 
 
@@ -56,7 +56,7 @@ class RosterStatSim(StatSim,RosterSim):
 
 class PlayerPositionOutSim(RosterStatSim):
     _prefix_ = "POS"
-    dcols = SeqIndex(['P','C','1B','2B','3B','SS','LF','CF','RF','DH'])
+    _dcol = ['P','C','1B','2B','3B','SS','LF','CF','RF','DH']
 
     #------------------------------- [play] -------------------------------#
 
@@ -73,7 +73,7 @@ class PlayerPositionOutSim(RosterStatSim):
 class PlayerBattingStatSim(RosterStatSim):
 
     _prefix_ = "PID"
-    dcols = SeqIndex(['PA','AB','S','D','T','HR','BB','IBB','HBP','K','I','SH','SF','R','RBI','GDP']+['SB','CS','PO']+['P','A','E'])
+    _dcol = ['PA','AB','S','D','T','HR','BB','IBB','HBP','K','I','SH','SF','R','RBI','GDP']+['SB','CS','PO']+['P','A','E']
 
     #------------------------------- [stats] -------------------------------#
 
@@ -150,7 +150,8 @@ class PlayerBattingStatSim(RosterStatSim):
 ###########################################################################################################
 
 class PlayerPitchingStatSim(RosterStatSim):
-    dcols = SeqIndex(['W','L','SV','IP','BF','R','ER','S','D','T','HR','BB','HBP','IBB','K','BK','WP','PO','GDP'])
+
+    _dcol = ['W','L','SV','IP','BF','R','ER','S','D','T','HR','BB','HBP','IBB','K','BK','WP','PO','GDP']
 
     _prefix_ = "PPID"
     #------------------------------- [play] -------------------------------#

@@ -57,7 +57,7 @@ class GAppearanceData():
 
 
 class GAppearanceSim(StatSim,RosterSim):
-    dcols = SeqIndex(['G','GS','cGB','GB','GD','P','C','1B','2B','3B','SS','LF','CF','RF','DH','PH','PR'])
+    _dcol = ['G','GS','cGB','GB','GD','P','C','1B','2B','3B','SS','LF','CF','RF','DH','PH','PR']
 
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
@@ -96,7 +96,7 @@ class GAppearanceSim(StatSim,RosterSim):
 
     def _recordStats(self,tinx,app):
         for col,pids in app.extract_stats().items():
-            j = self.dcols[col]
+            j = self.icol(col)
             for pid in pids:
                 self.matrix[tinx[pid],j] += 1
 

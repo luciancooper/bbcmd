@@ -34,7 +34,7 @@ class HandedRosterStatSim(StatSim,HandedRosterSim):
 
     def _stat(self,t,pid,hands,stat,inc=1):
         #print(f"away [{self.awayleague},{self.awayteam}] home [{self.homeleague},{self.hometeam}]")
-        i,j = self.tinx[t][(pid,*hands)],self.dcols[stat]
+        i,j = self.tinx[t][(pid,*hands)],self.icol(stat)
         self.matrix[i,j] += inc
 
 
@@ -46,7 +46,8 @@ class HandedRosterStatSim(StatSim,HandedRosterSim):
 class HandedPlayerBattingStatSim(HandedRosterStatSim):
 
     _prefix_ = "HND-PID"
-    dcols = SeqIndex(['PA','AB','S','D','T','HR','BB','IBB','HBP','K','I','SH','SF','RBI','GDP'])
+    _dcol = ['PA','AB','S','D','T','HR','BB','IBB','HBP','K','I','SH','SF','RBI','GDP']
+
     # ( 0   1   2    3    4     5    6   7   8   9   10 )
     # ('O','E','K','BB','IBB','HBP','I','S','D','T','HR')
     #------------------------------- [stats] -------------------------------#
@@ -101,7 +102,7 @@ class HandedPlayerBattingStatSim(HandedRosterStatSim):
 
 class HandedPlayerPitchingStatSim(HandedRosterStatSim):
     _prefix_ = "HND-PPID"
-    dcols = SeqIndex(['BF','S','D','T','HR','BB','HBP','IBB','K','BK','WP','PO','GDP'])
+    _dcol = ['BF','S','D','T','HR','BB','HBP','IBB','K','BK','WP','PO','GDP']
 
 
     #------------------------------- [play] -------------------------------#

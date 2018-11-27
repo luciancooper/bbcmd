@@ -10,11 +10,11 @@ from .matrix.core import BBMatrix
 
 class GameStatSim(StatSim):
     _prefix_ = 'Team Stat'
-    dcols = SeqIndex(['R','UR','TUR','PA','AB','S','D','T','HR','BB','IBB','HBP','K','I','SH','SF','RBI','GDP','SB','CS','PO','WP','PB','BK','P','A','E'])
+    _dcol = ['R','UR','TUR','PA','AB','S','D','T','HR','BB','IBB','HBP','K','I','SH','SF','RBI','GDP','SB','CS','PO','WP','PB','BK','P','A','E']
 
     def __init__(self,index,**kwargs):
         super().__init__(index,**kwargs)
-        self._data = np.zeros((2,len(self.dcols)),dtype=np.dtype(self.dtype))
+        self._data = np.zeros((2,self.ncol),dtype=np.dtype(self.dtype))
 
     #------------------------------- (Sim)[Back-End] -------------------------------#
 
@@ -29,7 +29,7 @@ class GameStatSim(StatSim):
     #------------------------------- [stat] -------------------------------#
 
     def _stat(self,t,stat,inc=1):
-        j = self.dcols[stat]
+        j = self.icol(stat)
         self._data[t,j] += inc
 
     #------------------------------- [stats] -------------------------------#
@@ -103,7 +103,7 @@ class GameStatSim(StatSim):
 
 class GameScoreSim(StatSim):
     _prefix_ = 'Scores'
-    dcols = SeqIndex(['a','h'])
+    _dcol = ['a','h']
 
     #------------------------------- (Sim)[Back-End] -------------------------------#
 
@@ -120,7 +120,7 @@ class GameScoreSim(StatSim):
 class RPOSim(StatSim):
 
     _prefix_ = 'RPO'
-    dcols = SeqIndex(['R','O'])
+    _dcol = ['R','O']
     dtype = 'u4'
 
     def __init__(self,index,**kwargs):
@@ -148,7 +148,7 @@ class RPOSim(StatSim):
 class RPPASim(StatSim):
 
     _prefix_ = 'R/PA'
-    dcols = SeqIndex(['R','PA'])
+    _dcol = ['R','PA']
     dtype = 'u4'
 
     def __init__(self,index,**kwargs):
@@ -180,7 +180,7 @@ class RPPASim(StatSim):
 class RPWSim(StatSim):
 
     _prefix_ = 'RPW'
-    dcols = SeqIndex(['R','IP'])
+    _dcol = ['R','IP']
     dtype = 'u4'
 
     def __init__(self,index,**kwargs):
