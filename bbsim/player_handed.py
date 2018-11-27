@@ -1,4 +1,3 @@
-from arrpy.inx import SeqIndex
 from .stat import StatSim
 from .core.handed import HandedRosterSim
 

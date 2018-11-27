@@ -1,5 +1,3 @@
-
-from arrpy.inx import SeqIndex
 from .stat import StatSim
 from .core.roster import RosterSim
 

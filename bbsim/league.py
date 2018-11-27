@@ -1,6 +1,5 @@
 
 import sys
-from arrpy.inx import SeqIndex
 import numpy as np
 from .matrix.core import BBMatrix
 from .stat import StatSim

@@ -5,7 +5,7 @@ setup(
     version='1.0',
     description='Baseball command line tools',
     author='Lucian Cooper',
-    packages=['bbsim','bbdata','cmdtools','arrpy'],
+    packages=['bbsim','bbdata','cmdtools'],
     install_requires=[
         'numpy',
         'pandas',

@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from arrpy.inx import SeqIndex
 from .stat import StatSim
 from .matrix.core import BBMatrix
 

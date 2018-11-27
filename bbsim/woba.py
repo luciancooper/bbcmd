@@ -1,5 +1,3 @@
-
-from arrpy.inx import SeqIndex
 import numpy as np
 import pandas as pd
 from .stat import StatSim
@@ -102,9 +100,9 @@ class wOBAWeightSim(StatSim):
     #------------------------------- [df] -------------------------------#
 
     def adjWeights(self):
-        data = self.matrix.subtract_columns(self.dcols.mapValues(['O','E','K']))
+        data = self.matrix.subtract_columns(self.mapCol(['O','E','K']))
         cols = ['BB','HBP','S','D','T','HR']
-        return pd.DataFrame(data[:,self.dcols.mapValues(cols)],index=self.index.pandas(),columns=cols)
+        return pd.DataFrame(data[:,self.mapCol(cols)],index=self.index.pandas(),columns=cols)
 
 
     def lwdf(self):
@@ -122,7 +120,7 @@ class wOBAWeightSim(StatSim):
         return -self.rem[ss]+rs if es>=24 else self.rem[es]-self.rem[ss]+rs
 
     def _stat(self,stat,inc=1):
-        j = self.dcols[stat]
+        j = self.icol(stat)
         self.matrix[self.yinx,j]+=(inc,1)
 
     #------------------------------- [play] -------------------------------#

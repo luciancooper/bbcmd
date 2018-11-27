@@ -1,5 +1,3 @@
-
-from arrpy.inx import SeqIndex
 from .core import BBSimError,zipmap
 from .player import RosterStatSim
 
@@ -201,7 +199,7 @@ class AppearanceSim(RosterStatSim):
 
 class LahmanAppearanceSim(RosterStatSim):
     _dcol = ['G','GS','GB','GD','P','C','1B','2B','3B','SS','LF','CF','RF','DH','PH','PR']
-    
+
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
         # List of players who have been in the game

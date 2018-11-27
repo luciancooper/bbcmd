@@ -1,6 +1,19 @@
 # bbcmd
 Command Line Baseball Tools
 
+# Installation
+
+Download or clone from this repository. Open up Terminal in Mac, or Command Prompt in Windows, and navigate to install location.
+
+```bash
+python setup.py install
+```
+
+
+# Setup
+
+After installation, the `bbdata` and `bbsim` commands should be in your systems path, via the `Scripts` directory of your Python installation
+
 ## Step 1. Download Data
 
 Download the necessary play by play data source files that the simulator depends on to run simulations. These files are stored on github in the [bbsrc](https://github.com/luciancooper/bbsrc) repository. The data in these files is derived from the play by play data provided by [retrosheet.org](https://www.retrosheet.org/). Retrosheet is an amazing organization that has painstakingly compiled the play by play data for every MLB game dating back to 1921. Find out more about the Retrosheet project [here](https://www.retrosheet.org/about.htm).
@@ -24,5 +37,96 @@ bbdata --xml years path
 
 If the current path does not contain your `bbdata.xml` file, navigate to that path. Run the following command, which will simulate the games for all the seasons specified by `bbdata.xml`, without recording any of the data.  
 ```bash
-bbstat -t game
+bbsim -t game
+```
+
+
+# Usage
+
+The following simulations are currently supported by this project
+
+## Group by Player
+
+```bash
+bbsim -r batting > file.csv
+```
+
+```bash
+bbsim -r pitching > file.csv
+```
+
+```bash
+bbsim -r hbatting > file.csv
+```
+
+```bash
+bbsim -r hpitching > file.csv
+```
+
+## Group by Game
+
+```bash
+bbsim -g stats > file.csv
+```
+
+```bash
+bbsim -g score > file.csv
+```
+
+
+## Group by Season
+
+```bash
+bbsim -s stats > file.csv
+```
+
+```bash
+bbsim -s rpo > file.csv
+```
+
+```bash
+bbsim -s rppa > file.csv
+```
+
+```bash
+bbsim -s rpw > file.csv
+```
+
+
+## Group by League
+
+```bash
+bbsim -l stats > file.csv
+```
+
+```bash
+bbsim -l nopitcher > file.csv
+```
+
+## Player Appearances
+
+```bash
+bbsim -a normal > file.csv
+```
+
+```bash
+bbsim -a lahman > file.csv
+```
+
+```bash
+bbsim -a position > file.csv
+```
+
+```bash
+bbsim -a simple > file.csv
+```
+
+## Calculations
+
+```bash
+bbsim -c woba > file.csv
+```
+
+```bash
+bbsim -c war > file.csv
 ```
