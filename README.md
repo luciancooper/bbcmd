@@ -37,7 +37,7 @@ bbdata --xml years path
 
 If the current path does not contain your `bbdata.xml` file, navigate to that path. Run the following command, which will simulate the games for all the seasons specified by `bbdata.xml`, without recording any of the data.  
 ```bash
-bbsim -t game
+bbsim test game
 ```
 
 
@@ -48,85 +48,85 @@ The following simulations are currently supported by this project
 ## Group by Player
 
 ```bash
-bbsim -r batting > file.csv
+bbsim roster batting > file.csv
 ```
 
 ```bash
-bbsim -r pitching > file.csv
+bbsim roster pitching > file.csv
 ```
 
 ```bash
-bbsim -r hbatting > file.csv
+bbsim roster hbatting > file.csv
 ```
 
 ```bash
-bbsim -r hpitching > file.csv
+bbsim roster hpitching > file.csv
 ```
 
 ## Group by Game
 
 ```bash
-bbsim -g stats > file.csv
+bbsim game stats > file.csv
 ```
 
 ```bash
-bbsim -g score > file.csv
+bbsim game score > file.csv
 ```
 
 
 ## Group by Season
 
 ```bash
-bbsim -s stats > file.csv
+bbsim season stats > file.csv
 ```
 
 ```bash
-bbsim -s rpo > file.csv
+bbsim season rpo > file.csv
 ```
 
 ```bash
-bbsim -s rppa > file.csv
+bbsim season rppa > file.csv
 ```
 
 ```bash
-bbsim -s rpw > file.csv
+bbsim season rpw > file.csv
 ```
 
 
 ## Group by League
 
 ```bash
-bbsim -l stats > file.csv
+bbsim league stats > file.csv
 ```
 
 ```bash
-bbsim -l nopitcher > file.csv
+bbsim league nopitcher > file.csv
 ```
 
 ## Player Appearances
 
 ```bash
-bbsim -a normal > file.csv
+bbsim appearance normal > file.csv
 ```
 
 ```bash
-bbsim -a lahman > file.csv
+bbsim appearance lahman > file.csv
 ```
 
 ```bash
-bbsim -a position > file.csv
+bbsim appearance position > file.csv
 ```
 
 ```bash
-bbsim -a simple > file.csv
+bbsim appearance simple > file.csv
 ```
 
 ## Calculations
 
 ```bash
-bbsim -c woba > file.csv
+bbsim calc woba > file.csv
 ```
 
 ```bash
-bbsim -c war > file.csv
+bbsim calc war > file.csv
 ```

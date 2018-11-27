@@ -3,13 +3,15 @@ from setuptools import setup
 setup(
     name='bbcmd',
     version='1.0',
-    description='Baseball command line tools',
     author='Lucian Cooper',
+    url='https://github.com/luciancooper/bbcmd',
+    description='Baseball command line tools',
     packages=['bbsim','bbdata','cmdtools'],
     install_requires=[
         'numpy',
         'pandas',
         'array',
+        'argparse',
         're',
         'xml',
         'os',
