@@ -1,29 +1,30 @@
 import sys
+import os
 import argparse
 from .data import seasonlib
 
-######################################################################################################
-
-USAGE = """
-bbsim <group> <simtype> [<verify>]
-
-Combinations include:
-    roster     [batting,pitching,hbatting,hpitching]
-    games      [stats,score]
-    season     [stats,rpo,rppa,rpw]
-    league     [stats,nopitcher]
-    calc       [woba]
-    appearance [position,simple,normal,lahman]
-    test       [game,roster,handed]
-"""
-class Main():
+class MainMethod():
 
     def __init__(self):
-        parser = argparse.ArgumentParser(description="Baseball Game Simulator",usage=USAGE)
+        parser = argparse.ArgumentParser(description="Baseball Game Simulator",usage="""
+        bbsim <group> <simtype> [<verify>]
+
+        Combinations include:
+            roster     [batting,pitching,hbatting,hpitching]
+            games      [stats,score]
+            season     [stats,rpo,rppa,rpw]
+            league     [stats,nopitcher]
+            calc       [woba]
+            appearance [position,simple,normal,lahman]
+            test       [game,roster,handed]
+        """)
         parser.add_argument('category',choices=['roster','games','season','league','calc','appearance','test'],help='Simulation Group')
         parser.add_argument('type',help='Simulation Type')
         parser.add_argument('-v','--verify',action='store_true',help='Verify simulator with context files')
         args = parser.parse_args()
+        if not os.path.exists('bbdata.xml'):
+            print(f"Error: bbdata.xml file not found in current directory. \nPlease refer to https://github.com/luciancooper/bbcmd for setup instructions")
+            exit(1)
         data = seasonlib('bbdata.xml')
 
         if not hasattr(self, f"{args.category}_{args.type}"):
@@ -272,6 +273,5 @@ class Main():
         print(df,file=sys.stderr)
         return df
 
-
-if __name__=='__main__':
-    Main()
+def main():
+    MainMethod()

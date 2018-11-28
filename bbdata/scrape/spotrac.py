@@ -100,7 +100,7 @@ def scrape_salary(start=0):
     teams = teams[teams['year']>=2011].reset_index(drop=True)
     if start > 0:
         teams = teams.iloc[start:,:]
-        bar = IncrementalBar(start+len(teams),prefix='Scraping Salaries').goto(start).iter(teams.iterrows())
+        bar = IncrementalBar(start+len(teams),prefix='Scraping Salaries').setInx(start).iter(teams.iterrows())
     else:
         bar = IncrementalBar(len(teams),prefix='Scraping Salaries').iter(teams.iterrows())
 

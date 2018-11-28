@@ -41,8 +41,7 @@ class MultiBar():
             self.init(max,prefix)
         for k,v in kwargs.items():
             setattr(self,k,v)
-        if self.out.isatty():
-            print(HIDE_CURSOR, end='', file=self.out)
+        self.hide_cursor()
 
     def __len__(self):
         return self._max[0]
@@ -69,7 +68,7 @@ class MultiBar():
         self._prefix[i] = prefix
         m = max(len(x) for x in self._prefix)
         self._prefixFormat = '{:<0}' if m==0 else '{:<%i}'%(m+1)
-    
+
     @property
     def avg(self):
         return self._avg[self._i]
@@ -165,7 +164,7 @@ class MultiBar():
         if not self.out.isatty():return
         if self._i==0:
             print(file=self.out)
-            print(SHOW_CURSOR, end='', file=self.out)
+            self.show_cursor()
             return True
         # Clear Level
         self._sts[self._i] = None
@@ -175,7 +174,7 @@ class MultiBar():
         self._set_prefix(self._i,'')
         self.ma.clear()
         # Erase Line
-        print(ERASE_LINE, end='',file=self.out)
+        self.clear_line()
         print(CURSOR_UP,end='',file=self.out)
         self._i-=1
         self._inc()

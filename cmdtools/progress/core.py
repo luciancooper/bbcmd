@@ -1,107 +1,78 @@
 
-from collections import deque
-from datetime import timedelta
-from math import ceil
 from sys import stderr
-from time import time
 
-class Infinite():
+class ProgCLI():
     out = stderr
-    ma_window = 10 # Simple Moving Average window
-    def __init__(self,prefix='',**kwargs):
-        self.inx,self.avg = 0,0
-        self._ma = deque(maxlen=self.ma_window)
-        self._sts = time()
-        self._ts = self._sts
-        self.prefix = prefix
+
+    def __init__(self,**kwargs):
+        self.inx = 0
         for k,v in kwargs.items():
             setattr(self,k,v)
 
-    def __getitem__(self, key):
-        return None if key.startswith('_') else getattr(self, key, None)
+    # -------- index --------- #
 
-    @property
-    def elapsed(self):
-        return int(time()-self._sts)
-    @property
-    def elapsed_td(self):
-        return timedelta(seconds=self.elapsed)
-
-    def inc(self,n=1): # next
-        now = time()
-        # Update Avg
-        if n>0:
-            self._ma.append((now-self._ts)/n)
-            self.avg = sum(self._ma)/len(self._ma)
-        self._ts = now
+    def incInx(self,n=1): # next
         self.inx+=n
-        self.update()
-        return self.inx-n
+        return self
+
+    def setInx(self,i):
+        self.inx = i
+        return self
+
+    # -------- core --------- #
+
+    def update(self):
+        return self
+
+    def start(self):
+        return self
+
+    def finish(self):
+        return self
+
+    # -------- iter --------- #
 
     def iter(self,it):
         def wrapper():
             try:
                 for x in it:
                     yield x
-                    self.inc()
+                    self.incInx().update()
+
             finally:
                 self.finish()
         self.update()
         return wrapper()
 
-
-    def update(self):
-        pass
-
-    def start(self):
-        pass
-
-    def finish(self):
-        pass
-
-
-class Progress(Infinite):
-    def __init__(self,max=None,**kwargs):
-        super().__init__(**kwargs)
-        self.max = max
-
-    @property
-    def remaining(self):
-        return max(self.max-self.inx,0)
-    @property
-    def eta(self):
-        return int(ceil(self.avg * self.remaining))
-    @property
-    def eta_td(self):
-        return timedelta(seconds=self.eta)
-
-    @property
-    def percent(self):
-        return self.progress * 100
-    @property
-    def progress(self):
-        return min(1,self.inx/self.max)
-
-    def start(self):
-        self.update()
-
-    def goto(self,inx):
-        self.inc(inx-self.inx)
-        return self
-
-    def iter(self,it):
-        if self.max == None:
-            try:
-                self.max = len(it)
-            except TypeError:
-                pass
-        return super().iter(it)
-
     def __iter__(self):
+        if self.inx == 0:
+            self.start().update()
         return self
 
     def __next__(self):
         if self.inx<self.max:
-            return self.inc()
+            i = self.inx
+            self.incInx().update()
+            return i
         self.finish()
         raise StopIteration()
+
+    # ----- Hide / Show Cursor ----- #
+
+    def hide_cursor(self):
+        print('\x1b[?25l', end='', file=self.out)
+
+    def show_cursor(self):
+        print('\x1b[?25h', end='', file=self.out)
+
+    def clear_line(self):
+        print('\r\x1b[K', end='', file=self.out)
+
+    # ----- Enter / Exit ----- #
+
+    def __enter__(self):
+        self.hide_cursor()
+        return self
+
+    def __exit__(self, type, value, tb):
+        self.show_cursor()

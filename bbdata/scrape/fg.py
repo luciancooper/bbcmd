@@ -69,7 +69,7 @@ def scrapeAdvancedBatting(infile,start=None,bar=True):
             yield 'fgid,year,team,BB%,K%,BB/K,AVG,OBP,SLG,OPS,ISO,Spd,BABIP,UBR,wGDP,wSB,wRC,wRAA,wOBA,wRC+'
         fgids = [l.strip().split(',') for l in f]
 
-    iditer = fgids if bar == False else IncrementalBar(start+len(fgids),prefix='Scraping Batting').goto(start).iter(fgids)
+    iditer = fgids if bar == False else IncrementalBar(start+len(fgids),prefix='Scraping Batting').setInx(start).iter(fgids)
     for fgid,pos in iditer:
         for l in advancedBatting(fgid,pos):
             yield l

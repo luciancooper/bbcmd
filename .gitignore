@@ -1,6 +1,17 @@
+
+# MacOS DS store hidden files
 .DS_Store
 ._.DS_Store
 **/.DS_Store
 **/._.DS_Store
+
+# Byte-compiled
+*.pyc
 __pycache__/
 **/__pycache__/
+
+# Distribution / packaging
+build/
+dist/
+files.txt
+*.egg-info/

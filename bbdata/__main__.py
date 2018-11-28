@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys,os,requests,time,itertools
+import sys,os,requests,itertools
 from contextlib import closing
 from cmdtools import parse_years,verify_dir
 import cmdtools.progress as progress
@@ -61,8 +61,4 @@ def main():
             f.write(bbdataXML(srcdir,args.years))
 
     elif args.env == True:
-        buildEnvironment(args.years,args.outdir)
-
-
-if __name__=='__main__':
-    main()
+        download_env(args.years,args.outdir)
