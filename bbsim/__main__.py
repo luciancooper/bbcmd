@@ -33,162 +33,136 @@ class MainMethod():
             exit(1)
         getattr(self,f"{args.category}_{args.type}")(data,args.verify)
 
-    ###################################################[test]###################################################
+    ###################################################[run]###################################################
 
     @staticmethod
-    def test_game(data,verify):
+    def _runsim_(sim,data):
+        bars = MultiBar(2,len(data),prefix=sim._prefix_)
+        for gd in data:
+            sim.initSeason(gd)
+            with gd:
+                for g in bars.iter(gd,str(gd.year)):
+                    sim.simGame(g,gd.gamectx())
+            sim.endSeason()
+        return sim
+
+    ###################################################[sim]###################################################
+
+    def test_game(self,data,verify):
         # bbsim test game
         from .core.game import GameSim
         sim = GameSim(safe=verify)
-        data.run(sim)
-        return sim
+        return self._runsim_(sim,data)
 
-    @staticmethod
-    def test_roster(data,verify):
+    def test_roster(self,data,verify):
         # bbsim test roster
         from .core.roster import RosterSim
         sim = RosterSim(safe=verify)
-        data.run(sim)
-        return sim
+        return self._runsim_(sim,data)
 
-    @staticmethod
-    def test_handed(data,verify):
+    def test_handed(self,data,verify):
         # bbsim test handed
         from .core.handed import HandedRosterSim
         sim = HandedRosterSim(safe=verify)
-        data.run(sim)
-        return sim
+        return self._runsim_(sim,data)
 
-    @staticmethod
-    def roster_batting(data,verify):
+    def roster_batting(self,data,verify):
         # bbsim player batting
         from .player import PlayerBattingStatSim
         sim = PlayerBattingStatSim(data.pidIndex,safe=verify)
-        data.run(sim)
-        return sim
+        return self._runsim_(sim,data)
 
-    @staticmethod
-    def roster_pitching(data,verify):
+    def roster_pitching(self,data,verify):
         # bbsim player pitching
         from .player import PlayerPitchingStatSim
         sim = PlayerPitchingStatSim(data.ppidIndex,safe=verify)
-        data.run(sim)
-        return sim
+        return self._runsim_(sim,data)
 
-    @staticmethod
-    def roster_hbatting(data,verify):
+    def roster_hbatting(self,data,verify):
         # bbsim player hbatting
         from .player_handed import HandedPlayerBattingStatSim
         sim = HandedPlayerBattingStatSim(data.pidHandedIndex,safe=verify)
-        data.run(sim)
-        return sim
+        return self._runsim_(sim,data)
 
-    @staticmethod
-    def roster_hpitching(data,verify):
+    def roster_hpitching(self,data,verify):
         # bbsim player hpitching
         from .player_handed import HandedPlayerPitchingStatSim
         sim = HandedPlayerPitchingStatSim(data.ppidHandedIndex,safe=verify)
-        data.run(sim)
-        return sim
+        return self._runsim_(sim,data)
 
-    @staticmethod
-    def appearance_normal(data,verify):
+    def appearance_normal(self,data,verify):
         # bbsim appearance normal
         from .appearance import AppearanceSim
         sim = AppearanceSim(data.pidIndex,safe=verify)
-        data.run(sim)
-        return sim
+        return self._runsim_(sim,data)
 
-    @staticmethod
-    def appearance_lahman(data,verify):
+    def appearance_lahman(self,data,verify):
         # bbsim appearance lahman
         from .appearance import LahmanAppearanceSim
         sim = LahmanAppearanceSim(data.pidIndex,safe=verify)
-        data.run(sim)
-        return sim
+        return self._runsim_(sim,data)
 
-    @staticmethod
-    def appearance_position(data,verify):
+    def appearance_position(self,data,verify):
         # bbsim appearance position
         from .player import PlayerPositionOutSim
         sim = PlayerPositionOutSim(data.pidIndex,safe=verify)
-        data.run(sim)
-        return sim
+        return self._runsim_(sim,data)
 
-    @staticmethod
-    def appearance_simple(data,verify):
+    def appearance_simple(self,data,verify):
         # bbsim appearance simple
         from .gappear import GAppearanceSim
         sim = GAppearanceSim(data.pidIndex,safe=verify)
-        data.run(sim)
-        return sim
+        return self._runsim_(sim,data)
 
-    @staticmethod
-    def league_stats(data,verify):
+    def league_stats(self,data,verify):
         # bbsim league stats
         from .league import SeasonStatSim
         sim = SeasonStatSim(data.leagueIndex,safe=verify)
-        data.run(sim)
-        return sim
+        return self._runsim_(sim,data)
 
-    @staticmethod
-    def league_nopitcher(data,verify):
+    def league_nopitcher(self,data,verify):
         # bbsim league nopitcher
         from .league import NPLeagueStatSim
         sim = NPLeagueStatSim(data.leagueIndex,safe=verify)
-        data.run(sim)
-        return sim
+        return self._runsim_(sim,data)
 
-    @staticmethod
-    def game_stats(data,verify):
+    def game_stats(self,data,verify):
         # bbsim game stats
         from .games import GameStatSim
         sim = GameStatSim(data.gidTeamIndex,safe=verify)
-        data.run(sim)
-        return sim
+        return self._runsim_(sim,data)
 
-    @staticmethod
-    def game_score(data,verify):
+    def game_score(self,data,verify):
         # bbsim game score
         from .games import GameScoreSim
         sim = GameScoreSim(data.gidIndex,safe=verify)
-        data.run(sim)
-        return sim
+        return self._runsim_(sim,data)
 
-    @staticmethod
-    def season_stats(data,verify):
+    def season_stats(self,data,verify):
         # bbsim season stats
         from .league import SeasonStatSim
         sim = SeasonStatSim(data.yearIndex,safe=verify)
-        data.run(sim)
-        return sim
+        return self._runsim_(sim,data)
 
-    @staticmethod
-    def season_rpo(data,verify):
+    def season_rpo(self,data,verify):
         # bbsim season rpo
         from .games import RPOSim
         sim = RPOSim(data.yearIndex,safe=verify)
-        data.run(sim)
-        return sim
+        return self._runsim_(sim,data)
 
-    @staticmethod
-    def season_rppa(data,verify):
+    def season_rppa(self,data,verify):
         # bbsim season rppa
         from .games import RPPASim
         sim = RPPASim(data.yearIndex,safe=verify)
-        data.run(sim)
-        return sim
+        return self._runsim_(sim,data)
 
-    @staticmethod
-    def season_rpw(data,verify):
+    def season_rpw(self,data,verify):
         # bbsim season rpw
         from .games import RPWSim
         sim = RPWSim(data.yearIndex,safe=verify)
-        data.run(sim)
-        return sim
+        return self._runsim_(sim,data)
 
-    @staticmethod
-    def calc_woba(data,verify):
+    def calc_woba(self,data,verify):
         # bbsim calc woba
         import numpy as np
         import pandas as pd
@@ -196,14 +170,11 @@ class MainMethod():
         from .league import SeasonStatSim
         yIndex = data.yearIndex
         # Sim Run Exp Matrix
-        rem = REMSim(yIndex,safe=verify)
-        data.run(rem)
+        rem = self._runsim_(REMSim(yIndex,safe=verify),data)
         # Sim wOBA linear weights
-        oba = wOBAWeightSim(yIndex,rem,safe=verify)
-        data.run(oba)
+        oba = self._runsim_(wOBAWeightSim(yIndex,rem,safe=verify),data)
         # Sim MLB Batting Stats
-        mlb = SeasonStatSim(yIndex,safe=verify)
-        data.run(mlb)
+        mlb = self._runsim_(SeasonStatSim(yIndex,safe=verify),data)
         # Calculate wOBA weights
         linear_weights = ['BB','HBP','S','D','T','HR']
         # Calc adjusted linear weights
@@ -221,8 +192,7 @@ class MainMethod():
         print(df,file=sys.stderr)
         return df
 
-    @staticmethod
-    def calc_war(data,verify):
+    def calc_war(self,data,verify):
         # bbsim calc war
         ### INCOMPLETE #####
         import numpy as np
@@ -232,18 +202,15 @@ class MainMethod():
 
         yIndex = data.yearIndex
         # Sim Run Exp Matrix
-        rem = REMSim(yIndex,safe=verify)
-        data.run(rem)
+
+        rem = self._runsim_(REMSim(yIndex,safe=verify),data)
         # Sim wOBA linear weights
-        oba = wOBAWeightSim(yIndex,rem,safe=verify)
-        data.run(oba)
+        oba = self._runsim_(wOBAWeightSim(yIndex,rem,safe=verify),data)
         # Sim MLB Batting Stats
-        mlb = SeasonStatSim(yIndex,safe=verify)
-        data.run(mlb)
+        mlb = self._runsim_(SeasonStatSim(yIndex,safe=verify),data)
 
         # Sim Non Pitcher League Batting Stats
-        lgue = NPLeagueStatSim(data.leagueIndex)
-        data.run(lgue)
+        lgue = self._runsim_(NPLeagueStatSim(data.leagueIndex),data)
 
         # Calculate wOBA weights
         linear_weights = ['BB','HBP','S','D','T','HR']

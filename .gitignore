@@ -15,3 +15,7 @@ build/
 dist/
 files.txt
 *.egg-info/
+
+
+# Specific Files
+progress_test

@@ -82,22 +82,13 @@ class seasonlib():
 
 
     def run(self,sim,progress=True):
-        if progress:
-            bars = MultiBar(2,len(self),prefix=sim._prefix_)
-            for gd in self:
-                sim.initSeason(gd)
-                with gd:
-                    for g in bars.iter(gd,str(gd.year)):
-                        sim.simGame(g,gd.gamectx())
-                sim.endSeason()
-        else:
-            for gd in self:
-                sim.initSeason(gd)
-                with gd:
-                    for g in gd:
-                        sim.simGame(g,gd.gamectx())
-                sim.endSeason()
-                print(f"{sim._prefix_} {gd.year} Complete")
+        for gd in self:
+            sim.initSeason(gd)
+            with gd:
+                for g in gd:
+                    sim.simGame(g,gd.gamectx())
+            sim.endSeason()
+            print(f"{sim._prefix_} {gd.year} Complete")
 
 
 class seasondata():

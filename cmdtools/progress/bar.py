@@ -6,9 +6,6 @@ from math import ceil
 from time import time
 from .core import ProgCLI
 
-HIDE_CURSOR = '\x1b[?25l'
-SHOW_CURSOR = '\x1b[?25h'
-
 #-------------------------------[bar]---------------------------------------------------------------#
 
 class LoadBar(ProgCLI):
