@@ -1,6 +1,5 @@
 
 import xml.etree.ElementTree as etree
-from cmdtools.progress import MultiBar
 from .index import BBIndex,BBLookup
 
 class seasonlib():

@@ -7,11 +7,14 @@ def loadBar(total,wait=0.2):
         time.sleep(wait)
 
 def incBar(total,wait=0.2):
-    bar = progress.IncrementalBar(max=total,prefix='IncBar')
+    bar = progress.IncrementalBar(prefix='IncBar').iter(range(total))
+    i = next(bar)
+    print(i)
     for i in bar:
+        print(i)
         time.sleep(wait)
+        break
 
 
 if __name__ == '__main__':
     incBar(120,0.05)
-    

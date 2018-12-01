@@ -1,7 +1,6 @@
-import sys
-import os
-import argparse
+import sys,os,argparse
 from .data import seasonlib
+from cmdtools.progress import MultiBar
 
 class MainMethod():
 
@@ -11,24 +10,24 @@ class MainMethod():
 
         Combinations include:
             roster     [batting,pitching,hbatting,hpitching]
-            games      [stats,score]
+            game       [stats,score]
             season     [stats,rpo,rppa,rpw]
             league     [stats,nopitcher]
             calc       [woba]
             appearance [position,simple,normal,lahman]
             test       [game,roster,handed]
         """)
-        parser.add_argument('category',choices=['roster','games','season','league','calc','appearance','test'],help='Simulation Group')
+        parser.add_argument('category',choices=['roster','game','season','league','calc','appearance','test'],help='Simulation Group')
         parser.add_argument('type',help='Simulation Type')
         parser.add_argument('-v','--verify',action='store_true',help='Verify simulator with context files')
         args = parser.parse_args()
         if not os.path.exists('bbdata.xml'):
-            print(f"Error: bbdata.xml file not found in current directory. \nPlease refer to https://github.com/luciancooper/bbcmd for setup instructions")
+            print(f"Error: bbdata.xml file not found in current directory. \nPlease refer to https://github.com/luciancooper/bbcmd for setup instructions",file=sys.stderr)
             exit(1)
         data = seasonlib('bbdata.xml')
 
         if not hasattr(self, f"{args.category}_{args.type}"):
-            print(f"{args.category} {args.type} is not a recognized simulation")
+            print(f"{args.category} {args.type} is not a recognized simulation",file=sys.stderr)
             parser.print_help()
             exit(1)
         getattr(self,f"{args.category}_{args.type}")(data,args.verify)

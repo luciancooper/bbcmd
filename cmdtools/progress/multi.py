@@ -1,17 +1,17 @@
 
+from .core import ProgCLI
 from collections import deque
 from datetime import timedelta
 from math import ceil
 from sys import stderr
 from time import time
 
-HIDE_CURSOR = '\x1b[?25l'
-SHOW_CURSOR = '\x1b[?25h'
+
 CURSOR_UP = '\x1b[1A'
 ERASE_LINE = '\r\x1b[K'
 #ERASE_LINE = '\r\x1b[K'
 
-class MultiBar():
+class MultiBar(ProgCLI):
     out = stderr
     ma_window = 10 # Simple Moving Average window
     width = 32

@@ -2,6 +2,7 @@
 from sys import stderr
 
 class ProgCLI():
+
     out = stderr
 
     def __init__(self,**kwargs):
@@ -35,13 +36,13 @@ class ProgCLI():
     def iter(self,it):
         def wrapper():
             try:
+                self.start().update()
                 for x in it:
                     yield x
                     self.incInx().update()
 
             finally:
                 self.finish()
-        self.update()
         return wrapper()
 
     def __iter__(self):
