@@ -21,7 +21,7 @@ setup(
         'console_scripts': [
             'bbsim = bbsim.__main__:main',
             'bbdata = bbdata.__main__:main',
-            #'bbscrape = bbdata.scrape.__main__:main',
+            'bbscrape = bbscrape.__main__:main',
         ]
     },
 )

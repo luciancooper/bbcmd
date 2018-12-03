@@ -3,7 +3,7 @@ import urllib.request
 from contextlib import closing
 from html.parser import HTMLParser
 
-class BBRTableParser(HTMLParser):
+class TableParser(HTMLParser):
     #Initializing lists
     def __init__(self,report_warnings=True):
         super().__init__()
@@ -27,7 +27,7 @@ class BBRTableParser(HTMLParser):
 
     # Check if tag should initiate parsing capture
     def should_parse(self,tag,attrs):
-        return tag == 'table'
+        return (tag == 'table') and ('id' in dict(attrs))
 
     # Handle start tag event
     def handle_starttag(self, tag, attrs):
@@ -44,7 +44,7 @@ class BBRTableParser(HTMLParser):
             if self.stack[i]==tag:
                 break
         else:
-            if self.report_warnings:
+            if self.report_warnings == True:
                 print(f"Table Parse Warning: {tag} Tags Imbalanced",file=sys.stderr)
             return
         self.stack = self.stack[:i]
@@ -57,8 +57,8 @@ class BBRTableParser(HTMLParser):
                     id = dict(self.attrs[i])['id']
                     self.tables[id] = ele
                 except KeyError as e:
-                    if self.report_warnings:
-                        print(f"Warning: Baseball Reference table does not have ID and was not recorded")
+                    if self.report_warnings == True:
+                        print(f"Warning: Table does not have ID and was not recorded",file=sys.stderr)
             else:
                 self.cache[j-1] += ele
             self.cache = self.cache[:j]
@@ -83,7 +83,7 @@ class BBRTableParser(HTMLParser):
 
     # Handle comments, in baseball reference files, comments may contain hidden tables
     def handle_comment(self,data):
-        for k,t in self.__class__().feed(data):
+        for k,t in self.__class__(self.report_warnings).feed(data):
             self.tables[k] = t
 
     def feed_url(self,url):

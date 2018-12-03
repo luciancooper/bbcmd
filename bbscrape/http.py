@@ -3,7 +3,7 @@ from requests import get
 from requests.exceptions import RequestException
 from contextlib import closing
 
-def simple_get(url):
+def get_html(url):
     try:
         with closing(get(url, stream=True)) as resp:
             content_type = resp.headers['Content-Type'].lower()

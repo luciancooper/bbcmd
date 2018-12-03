@@ -1,10 +1,9 @@
 
-from .http import simple_get
+from .http import get_html
 from bs4 import BeautifulSoup
 import pandas as pd
 from cmdtools.progress import IncrementalBar
 import re
-
 
 
 def parse_tag(tag):
@@ -85,7 +84,7 @@ def spotrac_captabletable(html):
 
 def scrape_spotrac(year,team,city,teamname):
     url = f"https://www.spotrac.com/mlb/{city.lower().replace(' ','-')}-{teamname.lower().replace(' ','-')}/payroll/{year}"
-    get = simple_get(url)
+    get = get_html(url)
     html = BeautifulSoup(get, 'html.parser')
     with open(f'{year}{team}_PT.csv','w') as f:
         for l in spotrac_playertable(html):
