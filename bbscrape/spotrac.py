@@ -1,107 +1,80 @@
-
 from .http import get_html
 from bs4 import BeautifulSoup
 import pandas as pd
-from cmdtools.progress import IncrementalBar
+import numpy as np
 import re
+from functools import reduce
 
+__all__ = ['spotrac_keys','spotrac_playertable','spotrac_captable']
 
 def parse_tag(tag):
     return ''.join(parse_tag(x) if x.__class__.__name__ == 'Tag' else str(x) for x in tag.contents)
 
 def fmt_number(val):
-    return '' if val=='-' else re.sub(r'[,$]','',val.strip())
+    val = val.strip()
+    if val == '-':
+        return ''
+    if val.startswith('$'):
+        return re.sub(r'[,$]','',val)
+    return val
 
 
 ###########################################################################################################
 #                                         PlayerTable                                                     #
 ###########################################################################################################
 
+def parse_table(table):
+    def parse_pid(td):
+        last = parse_tag(td.select_one('span'))
+        full = parse_tag(td.select_one('a'))
+        first = full[:full.rindex(last)].strip()
+        return [first,last,full]
 
-def parse_pid(td):
-    span = td.select_one('span')
-    link = td.select_one('a')
-    lastname = parse_tag(span)
-    fullname = parse_tag(link)
-    firstname = fullname[:fullname.rindex(lastname)].strip()
-    return [firstname,lastname,fullname]
+    def parse_tbody(table):
+        for tr in table.select_one('tbody').select('tr'):
+            cells = tr.select('td')
+            yield parse_pid(cells[0]) + [fmt_number(parse_tag(td)) for td in cells[1:]]
 
-def parse_player_row(tr):
-    tds = iter(tr.select('td'))
-    pid = parse_pid(next(tds))
-    data = [parse_tag(td) for td in tds]
-    return pid+data[:3]+[fmt_number(x) for x in data[3:]]
-
-
-def parse_thead(table):
-    return [parse_tag(th) for th in table.select_one('thead').select_one('tr').select('th')]
+    cols = ['firstname','lastname','fullname']+[parse_tag(th) for th in table.select_one('thead').select_one('tr').select('th')[1:]]
+    return [cols]+[*parse_tbody(table)]
 
 
+def merge_cols(a,b):
+    COLS = ['firstname', 'lastname', 'fullname','League','Age', 'Pos.', 'Status', 'Base Salary', 'Signing Bonus', 'Incentives', 'Total Salary', 'Adj. Salary', 'Payroll %']
+    hA,hB = a[0],b[0]
+    nA,nB = len(a)-1,len(b)-1
+    colA,colB = [list(x) for x in zip(*a[1:])],[list(x) for x in zip(*b[1:])]
+    for c in COLS:
+        yield [c]+(colA[hA.index(c)] if c in hA else ['']*nA)+(colB[hB.index(c)] if c in hB else ['']*nB)
 
-def parse_tbody(table):
-    for tr in table.select_one('tbody').select('tr'):
-        row = parse_player_row(tr)
-        yield ','.join(row)
-
-
-
-def spotrac_playertable(html):
-    tcontainer = html.select_one('#main').select_one('div.teams')
-    tables = tcontainer.select('table.datatable.tablesorter')
-    t0 = next(tables)
-    thead = parse_thead(t0)
-    yield ','.join(['firstname','lastname','fullname']+head[1:])
-
-    #table = .select_one('table:nth-of-type(1)')
-    htr = table.select_one('thead').select_one('tr')
-    head = [parse_tag(th) for th in htr.select('th')]
-    yield ','.join(['firstname','lastname','fullname']+head[1:])
-    for tr in table.select_one('tbody').select('tr'):
-        row = parse_player_row(tr)
-        yield ','.join(row)
+def spotrac_playertable(year,team,url):
+    soup = BeautifulSoup(get_html(url), 'html.parser')
+    tables = [t for t in soup.select_one('#main').select_one('div.teams').select('table') if "captotal" not in t['class']]
+    table = reduce(lambda a,b: [list(x) for x in zip(*merge_cols(a,b))],[parse_table(t) for t in tables])
+    yield ','.join(['year','team']+table[0])
+    for r in table[1:]:
+        yield f"{year},{team},{','.join(r)}"
 
 
 ###########################################################################################################
 #                                         Cap Table                                                     #
 ###########################################################################################################
 
-
-def spotrac_captabletable(html):
-    table = html.select_one('table.datatable.captotal.xs-hide')
-    htr = table.select_one('thead').select_one('tr')
-    head = [parse_tag(th) for th in htr.select('th')]
-    yield ','.join(head)
+def spotrac_captable(year,team,url):
+    soup = BeautifulSoup(get_html(url), 'html.parser')
+    table = soup.select_one('table.datatable.captotal.xs-hide')
+    yield ','.join(['year','team']+[parse_tag(th) for th in table.select_one('thead > tr').select('th')])
     for tr in table.select_one('tbody').select('tr'):
-        row = [parse_tag(td) for td in tr.select('td')]
-        row = row[:1]+[fmt_number(x) for x in row[1:]]
-        yield ','.join(row)
-
+        yield ','.join([str(year),team]+[fmt_number(parse_tag(td)) for td in tr.select('td')])
 
 ###########################################################################################################
 #                                         Command                                                     #
 ###########################################################################################################
 
-
-def scrape_spotrac(year,team,city,teamname):
-    url = f"https://www.spotrac.com/mlb/{city.lower().replace(' ','-')}-{teamname.lower().replace(' ','-')}/payroll/{year}"
-    get = get_html(url)
-    html = BeautifulSoup(get, 'html.parser')
-    with open(f'{year}{team}_PT.csv','w') as f:
-        for l in spotrac_playertable(html):
-            print(l,file=f)
-    with open(f'{year}{team}_CT.csv','w') as f:
-        for l in spotrac_captabletable(html):
-            print(l,file=f)
-
-
-def scrape_salary(start=0):
-    teams = pd.read_csv('/Users/luciancooper/BBSRC/FILES/TeamInfo.csv',usecols=['year','team','city','name'])
-    teams = teams[teams['year']>=2011].reset_index(drop=True)
-    if start > 0:
-        teams = teams.iloc[start:,:]
-        bar = IncrementalBar(start+len(teams),prefix='Scraping Salaries').setInx(start).iter(teams.iterrows())
-    else:
-        bar = IncrementalBar(len(teams),prefix='Scraping Salaries').iter(teams.iterrows())
-
-    for i,(year,team,city,name) in bar:
-        scrape_spotrac(year,team,city,name)
+def spotrac_keys(years):
+    teams = pd.read_csv('https://raw.githubusercontent.com/luciancooper/bbsrc/master/files/team_ids.csv',usecols=['year','retro_id','city','team'])
+    teams = teams[teams['year']>=2011].values
+    teams = teams[np.array([y in years for y in teams[:,0]],dtype=bool),:]
+    url = "https://www.spotrac.com/mlb/{}-{}/payroll/{}"
+    for year,team,city,name in teams:
+        yield year,team,url.format(city.lower().replace(' ','-'),name.lower().replace(' ','-'),year)

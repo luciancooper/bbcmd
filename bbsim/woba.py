@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from .stat import StatSim
+from .core.stat import StatSim
 from .matrix import BBMatrix,REMatrix
 
 ###########################################################################################################

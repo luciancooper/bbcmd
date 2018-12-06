@@ -1,4 +1,4 @@
-from . import BBSimError,zipmap
+from . import BBSimError,BBSimSubstitutionError,BBSimVerifyError,zipmap
 from .roster import RosterSim
 
 class HandedRosterSim(RosterSim):
@@ -145,11 +145,11 @@ class HandedRosterSim(RosterSim):
                     for i,b in zipmap(self._bitindexes(self.bflg),self.base):
                         if b[0]==runner: break
                     else:
-                        raise BBSimError(self.gameid,self.eid,'pinchrun error [%s] not on base'%runner)
+                        raise BBSimSubstitutionError(f'pinchrun error [{runner}] not on base')
                     self.base[i] = (pid,self.base[i][1])
                 else:
                     if self._lpos_!=lpos:
-                        raise BBSimError(self.gameid,self.eid,'Pinchit Discrepancy _lpos_[{}] lpos[{}]'.format(self._lpos_,lpos))
+                        raise BBSimSubstitutionError(f'Pinchit Discrepancy _lpos_[{self._lpos_}] lpos[{lpos}]')
                     if count!='' and count[1]=='2':
                         self._cache_resp_batter()
                 self.fpos[t][self.lpos[t][lpos]] = pid
@@ -164,7 +164,7 @@ class HandedRosterSim(RosterSim):
                 if fpos==0:
                     self.phand[t] = self.phlookup[self.teams[t],pid]
         else:
-            if fpos>9:raise BBSimError(self.gameid,self.eid,'defensive pinch sub [%i]'%fpos)
+            if fpos>9:raise BBSimSubstitutionError(f'defensive pinch sub [{fpos}]')
             if fpos==0 and count in ['20','21','30','31','32']:
                 self._cache_resp_pitcher()
             if (lpos>=0):
@@ -206,7 +206,7 @@ class HandedRosterSim(RosterSim):
             line1 = f"Player IDS: batter:({bpid}<{blook}>|{rbpid}<{rblook}>)({_bpid}|{_rbpid}) pitcher:({ppid}|{rppid})({_ppid}|{_rppid})"
             line2 = f"Hands: bhand({bhand}:{_bhand}) rbhand({rbhand}:{_rbhand}) phand({phand}:{_phand}) rphand({rphand}:{_rphand})"
             print(f"\n[{self.gameid}-{self.eid:03}]\n{line1}\n{line2}\n\n")
-            #raise BBSimError(self.gameid,self.eid,line1,line2)
+            #raise BBSimVerifyError(f"\n{line1}\n{line2}\n\n")
 
 
     #------------------------------- [str] -------------------------------#

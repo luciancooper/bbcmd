@@ -1,11 +1,18 @@
 
 from sys import stderr
 
+
+class ProgCLIError(Exception):
+    pass
+
+
 class ProgCLI():
 
     out = stderr
 
     def __init__(self,**kwargs):
+        if not self.out.isatty():
+            raise ProgCLIError("ProgCLI must be used within a command line interface")
         self.inx = 0
         for k,v in kwargs.items():
             setattr(self,k,v)
@@ -68,6 +75,9 @@ class ProgCLI():
 
     def clear_line(self):
         print('\r\x1b[K', end='', file=self.out)
+
+    def line_up(self):
+        print('\x1b[1A', end='', file=self.out)
 
     # ----- Enter / Exit ----- #
 

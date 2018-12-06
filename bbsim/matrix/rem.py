@@ -27,7 +27,7 @@ class REMatrix():
             states = [a for b in [*zip(*states)] for a in b]
         self.data = np.array(states,dtype=np.dtype('f2'))
 
-    #------------------------------- [lib] -------------------------------#
+    #------------------------------- [data] -------------------------------#
 
     def calc24(self,i,j,rs=0):
         return (-self.data[i] if j>=24 else self.data[j]-self.data[i])+rs

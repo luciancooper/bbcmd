@@ -1,5 +1,5 @@
-from .core import BBSimError,zipmap
-from .stat import StatSim
+from .core import BBSimError,BBSimSubstitutionError,zipmap
+from .core.stat import StatSim
 from .core.roster import RosterSim
 
 
@@ -125,12 +125,12 @@ class GAppearanceSim(StatSim,RosterSim):
                     for i,b in zipmap(self._bitindexes(self.bflg),self.base):
                         if b[0]==runner: break
                     else:
-                        raise BBSimError(self.gameid,self.eid,f'pinchrun error [{runner}] not on base')
+                        raise BBSimSubstitutionError(f'pinchrun error [{runner}] not on base')
                     self.base[i] = (pid,self.base[i][1])
                     self.app[t].pr.add(pid)
                 else:
                     if self._lpos_!=lpos:
-                        raise BBSimError(self.gameid,self.eid,f'Pinchit Discrepancy _lpos_[{self._lpos_}] lpos[{lpos}]')
+                        raise BBSimSubstitutionError(f'Pinchit Discrepancy _lpos_[{self._lpos_}] lpos[{lpos}]')
                     if count!='' and count[1]=='2':
                         self.rpid[1] = self._bpid_
                     self.app[t].ph.add(pid)
@@ -147,10 +147,10 @@ class GAppearanceSim(StatSim,RosterSim):
             self.app[t].g.add(pid)
         else:
             if self.dt!=t:
-                raise BBSimError(self.gameid,self.eid,f'defensive sub df({self.df}) != t({t})')
+                raise BBSimSubstitutionError(f'defensive sub df({self.df}) != t({t})')
             if fpos>=9:
                 # occurs when fpos = DH, PH, PR
-                raise BBSimError(self.gameid,self.eid,f'defensive {self._FPOS[fpos]} sub [{fpos}]')
+                raise BBSimSubstitutionError(f'defensive {self._FPOS[fpos]} sub [{fpos}]')
             if (lpos>=0):
                 self.lpos[t][lpos] = fpos
                 self.app[t].bl.add(pid)

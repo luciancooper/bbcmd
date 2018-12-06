@@ -1,10 +1,10 @@
 import re
 import pandas as pd
-from .core.game import GameSim
-from .matrix.core import BBMatrix
+from .game import GameSim
+from ..matrix.core import BBMatrix
 
 ###########################################################################################################
-#                                             RosterSim                                                   #
+#                                             StatSimvv                                                   #
 ###########################################################################################################
 
 class StatSim(GameSim):
@@ -28,7 +28,7 @@ class StatSim(GameSim):
 
     def mapCol(self,vals):
         return [self.icol(v) for v in vals]
-    
+
     #------------------------------- [pandas] -------------------------------#
 
     def df(self,index=True,**args):

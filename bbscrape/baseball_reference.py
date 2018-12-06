@@ -4,19 +4,12 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import numpy as np
 
-# Baseball-Reference Teams Info
-def bbr_teamkeys_years(years):
-    data = pd.read_csv('https://raw.githubusercontent.com/luciancooper/bbsrc/master/files/scraping/bbr_teams.csv',usecols=['year','team']).values
-    inx = np.array([y in years for y in data[:,0]],dtype=bool)
-    return data[inx,:]
+__all__ = ['bbr_teamkeys','bbr_teamids_year','bbr_team_table']
 
-def bbr_teamkeys_team(team):
-    data = pd.read_csv('https://raw.githubusercontent.com/luciancooper/bbsrc/master/files/scraping/bbr_teams.csv',usecols=['year','team']).values
-    inx = (data[:,1] == team)
-    return data[inx,:]
+# Baseball-Reference Teams Info
 
 def bbr_teamkeys(team = None,year = None):
-    data = pd.read_csv('https://raw.githubusercontent.com/luciancooper/bbsrc/master/files/scraping/bbr_teams.csv',usecols=['year','team']).values
+    data = pd.read_csv('https://raw.githubusercontent.com/luciancooper/bbsrc/master/files/team_ids.csv',usecols=['year','bbr_id']).values
     if year != None:
         if type(year) == int:
             yinx = (data[:,0] == year)

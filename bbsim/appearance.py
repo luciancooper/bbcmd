@@ -1,4 +1,4 @@
-from .core import BBSimError,zipmap
+from .core import BBSimError,BBSimSubstitutionError,zipmap
 from .player import RosterStatSim
 
 ###########################################################################################################
@@ -35,7 +35,6 @@ class AppearanceSim(RosterStatSim):
     def _endGame(self):
         """ Clears the simulator in preparation for next game """
         self.innswitch = True
-        #if any(self.batflag+self.posflag): raise BBSimError(self.gameid,self.eid,'Leftover Flags {0:}[{2:09b}] F[{4:010b}] {1:}[{3:09b}] F[{5:010b}]'.format(*self.teams,*self.batflag,*self.posflag))
 
         for t in [0,1]:
             self.gb_pid[t].clear()
@@ -84,11 +83,11 @@ class AppearanceSim(RosterStatSim):
                     for i,b in zipmap(self._bitindexes(self.bflg),self.base):
                         if b[0]==runner: break
                     else:
-                        raise BBSimError(self.gameid,self.eid,f'pinchrun error [{runner}] not on base')
+                        raise BBSimSubstitutionError(f'pinchrun error [{runner}] not on base')
                     self.base[i] = (pid,self.base[i][1])
                 else:
                     if self._lpos_!=lpos:
-                        raise BBSimError(self.gameid,self.eid,f'Pinchit Discrepancy _lpos_[{self._lpos_}] lpos[{lpos}]')
+                        raise BBSimSubstitutionError(f'Pinchit Discrepancy _lpos_[{self._lpos_}] lpos[{lpos}]')
                     if count!='' and count[1]=='2':
                         self.rpid[1] = self._bpid_
                     self.phflag = True
@@ -96,7 +95,7 @@ class AppearanceSim(RosterStatSim):
                     self.phr_pid.add((pid,self.PINCH[fpos-10]))
                     self._stat(t,pid,self.PINCH[fpos-10])
                 else:
-                    raise BBSimError(self.gameid,self.eid,f'Player has already PH or PR [{pid}] type[{self.PINCH[fpos-10]}]')
+                    raise BBSimSubstitutionError(f'Player has already PH or PR [{pid}] type[{self.PINCH[fpos-10]}]')
                 #if self.pos_pid.add((pid,self.POS[fpos])):
                 #    self._stat(t,pid,self.POS[fpos])
                 fpos = self.lpos[t][lpos]
@@ -122,9 +121,9 @@ class AppearanceSim(RosterStatSim):
                 self.posflag[t]|=1<<fpos
         else:
             if self.dt!=t:
-                raise BBSimError(self.gameid,self.eid,'defensive sub df(%i) != t(%i)'%(self.df,t))
-            if fpos>9:raise BBSimError(self.gameid,self.eid,'defensive pinch sub [%i]'%fpos)
-            if fpos==9:raise BBSimError(self.gameid,self.eid,'defensive dh sub [%i]'%fpos)
+                raise BBSimSubstitutionError(f'defensive sub df({self.df}) != t({t})')
+            if fpos>9:raise BBSimSubstitutionError(f'defensive pinch sub [{fpos}]')
+            if fpos==9:raise BBSimSubstitutionError(f'defensive dh sub [{fpos}]')
             if (lpos>=0):
                 self.lpos[t][lpos] = fpos
                 self.batflag[t]|=1<<lpos
@@ -255,17 +254,17 @@ class LahmanAppearanceSim(RosterStatSim):
                     for i,b in zipmap(self._bitindexes(self.bflg),self.base):
                         if b[0]==runner: break
                     else:
-                        raise BBSimError(self.gameid,self.eid,'pinchrun error [%s] not on base'%runner)
+                        raise BBSimSubstitutionError(f'pinchrun error [{runner}] not on base')
                     self.base[i] = (pid,self.base[i][1])
                 else:
-                    if self._lpos_!=lpos: raise BBSimError(self.gameid,self.eid,'Pinchit Discrepancy _lpos_[{}] lpos[{}]'.format(self._lpos_,lpos))
+                    if self._lpos_!=lpos: raise BBSimSubstitutionError(f'Pinchit Discrepancy _lpos_[{self._lpos_}] lpos[{lpos}]')
                     if count!='' and count[1]=='2': self.rpid[1] = self._bpid_
 
                 if (pid,self.PINCH[fpos-10]) not in self.phr_pid:
                     self.phr_pid.add((pid,self.PINCH[fpos-10]))
                     self._stat(t,pid,self.PINCH[fpos-10])
                 else:
-                    raise BBSimError(self.gameid,self.eid,'Player has already PH or PR [{}] type[{}]'.format(pid,self.PINCH[fpos-10]))
+                    raise BBSimSubstitutionError(f'Player has already PH or PR [{pid}] type[{self.PINCH[fpos-10]}]')
                 fpos = self.lpos[t][lpos]
                 self.fpos[t][fpos] = pid
                 if pid not in self.gb_pid:
@@ -293,9 +292,9 @@ class LahmanAppearanceSim(RosterStatSim):
                 self._stat(t,pid,'G')
 
         else:
-            if self.dt!=t: raise BBSimError(self.gameid,self.eid,'defensive sub df(%i) != t(%i)'%(self.df,t))
-            if fpos>9:raise BBSimError(self.gameid,self.eid,'defensive pinch sub [%i]'%fpos)
-            if fpos==9:raise BBSimError(self.gameid,self.eid,'defensive dh sub [%i]'%fpos)
+            if self.dt!=t: raise BBSimSubstitutionError(f'defensive sub df({self.df}) != t({t})')
+            if fpos>9:raise BBSimSubstitutionError(f'defensive pinch sub [{fpos}]')
+            if fpos==9:raise BBSimSubstitutionError(f'defensive dh sub [{fpos}]')
             if (lpos>=0):
                 self.lpos[t][lpos] = fpos
                 if pid not in self.gb_pid:

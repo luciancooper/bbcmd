@@ -3,6 +3,8 @@ from requests import get
 from requests.exceptions import RequestException
 from contextlib import closing
 
+__all__ = ['get_html']
+
 def get_html(url):
     try:
         with closing(get(url, stream=True)) as resp:

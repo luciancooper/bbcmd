@@ -1,6 +1,6 @@
 
 #import bbsrc
-from . import BBSimError
+from . import BBSimError,BBSimVerifyError
 
 # NOSIMLIST --> 20070926SEACLE1
 
@@ -80,15 +80,15 @@ class GameSim():
     FINAL = {'wp':0,'lp':1,'sv':2,'er':3}
 
 
-    def __init__(self,safe=True):
-        # Safe - if context is checked for simulation Sync
-        self.safe = safe
+    def __init__(self):
         # Year
         self.year = None
         # Game ID YYYYMMDDHHHAAAG [Y=year,M=month,D=day,H=hometeam,A=awayteam,G=game number (always 0 unless double header)]
         self.gameid = None
         # Current Event Number
         self.eid = None
+        # Current Event Code
+        self.ecode = None
         # Teams
         self.teams = None
         # Leagues
@@ -103,8 +103,8 @@ class GameSim():
         self.i,self.t,self.o=0,0,0
         # Box Score
         self.score,self.lob = [0,0],[0,0]
-        # attr where data storage mechanism resides
-        self.lib=None
+
+
 
     #------------------------------- (Sim)[frame] -------------------------------#
 
@@ -122,23 +122,27 @@ class GameSim():
     #------------------------------- [simgame] -------------------------------#
 
     # Reads the preformatted gamedata file and simulates the next game
-    def simGame(self,gl,cl):
+    def simGame(self,gl):
         i,ginfo = next(gl)
         i,lineup = next(gl)
         self._initGame(*ginfo)
         self._lineup(lineup)
         for i,l in gl:
-            if i=='E':
-                self.eid += 1
-                self._play(l,next(cl))
-            elif i=='S':
-                self._sub(l)
-            elif i=='O':
-                self._boot(l)
-            elif i=='B':
-                self._badj(l)
-            elif i=='P':
-                self._padj(l)
+            try:
+                if i=='E':
+                    self.eid += 1
+                    self.ecode = int(l[0][self.EVENT['code']])
+                    self._play(*l)
+                elif i=='S':
+                    self._sub(l)
+                elif i=='O':
+                    self._boot(l)
+                elif i=='B':
+                    self._badj(l)
+                elif i=='P':
+                    self._padj(l)
+            except Exception as e:
+                raise BBSimError(self.gameid,self.eid,f"Error Occured while Processing {i},{l}") from e
         self._final(l)
         self._endGame()
 
@@ -155,10 +159,13 @@ class GameSim():
 
     def _endGame(self):
         '''Clears the simulator in preparation for next game'''
-        self.gameid,self.eid,self.site,self.teams,self.leagues = None,None,None,None,None
+        self.gameid,self.eid, = None,None
+        self.site,self.teams,self.leagues = None,None,None
+        self.ecode = None
         self.bflg = 0
         self.i,self.t,self.o=0,0,0
         self.score,self.lob = [0,0],[0,0]
+
 
     #------------------------------- [Properties] -------------------------------#
 
@@ -260,24 +267,24 @@ class GameSim():
         self.t ^= 1
 
     #------------------------------- [event] -------------------------------#
-    def _play(self,l,ctx):
+    def _play(self,l,ctx=None):
         """ Takes additional Safety Inputs """
-        if self.safe:
+        if ctx!=None:
             self._verify(l,ctx)
         self._event(l)
 
     def _verify(self,l,ctx):
         """ Uses safety line inputs to ensure the simulation is not corrupted """
         if self.eid != int(l[0]):
-            raise BBSimError(self.gameid,self.eid,f'event number discrepency with input line {l[0]}')
+            raise BBSimVerifyError(f'event number discrepency with input line {l[0]}')
         if self.gameid!=ctx[0][:15] or self.eid != int(ctx[0][-3:]):
-            raise BBSimError(self.gameid,self.eid,f'gameid/eid discrepency with context line {ctx[0]}')
+            raise BBSimVerifyError(f'gameid/eid discrepency with context line {ctx[0]}')
         i,t = (int(ctx[x]) for x in [self.CTX['i'],self.CTX['t']])
         if self.inning!=i or self.t!=t:
-            raise BBSimError(self.gameid,self.eid,f'Inning Discrepency [{self.inning},{self.t}][{i},{t}]')
+            raise BBSimVerifyError(f'Inning Discrepency [{self.inning},{self.t}][{i},{t}]')
         a,h = (int(x) for x in ctx[self.CTX['score']])
         if self.score[0]!=a or self.score[1]!=h:
-            raise BBSimError(self.gameid,self.eid,f'Score Discrepency [{self.score[0]},{self.score[1]}|{a},{h}]')
+            raise BBSimVerifyError(f'Score Discrepency [{self.score[0]},{self.score[1]}|{a},{h}]')
 
 
     def _event(self,l):

@@ -74,6 +74,11 @@ class LoadBar(ProgCLI):
                 pass
         return super().iter(it)
 
+    def __iter__(self):
+        if self.max == None:
+            raise ProgCLIError("A maximum has not been provided to progress bar")
+        return super().__iter__()
+
     # ------------ Progress -------------- #
 
     @property
@@ -104,13 +109,13 @@ class LoadBar(ProgCLI):
 class ChargingBar(LoadBar):
     bar_padding = ' %s '
     fill = ('█','∙')
-    flavors = {
+    themes = {
         'squares':('▣','▢'),
         'circles':('◉','◯'),
     }
-    def __init__(self,*args,flavor=None,**kwargs):
-        if flavor:
-            self.fill = self.flavors[flavor.lower()]
+    def __init__(self,*args,theme=None,**kwargs):
+        if theme:
+            self.fill = self.themes[theme.lower()]
         super().__init__(*args,**kwargs)
 
     @property
@@ -124,22 +129,21 @@ class ChargingBar(LoadBar):
 
 class IncrementalBar(LoadBar):
     fill = (' ', '▏', '▎', '▍', '▌', '▋', '▊', '▉', '█')
-    flavors = {
+    themes = {
         'pixel':('⡀', '⡄', '⡆', '⡇', '⣇', '⣧', '⣷', '⣿'),
         'shady':(' ', '░', '▒', '▓', '█'),
     }
-    def __init__(self,*args,flavor=None,**kwargs):
-        if flavor:
-            self.fill = self.flavors[flavor.lower()]
+    def __init__(self,*args,theme=None,**kwargs):
+        if theme:
+            self.fill = self.themes[theme.lower()]
         super().__init__(*args,**kwargs)
 
     @property
     def _barstr_(self):
-        nfill = len(self.fill)
         filled_len = self.width * self.progress
         nfull = int(filled_len)                      # Number of full chars
         nempty = self.width - nfull                  # Number of empty chars
-        phase = int((filled_len - nfull) * nfill)    # Phase of last char
+        phase = int((filled_len - nfull) * len(self.fill))    # Phase of last char
 
         current = self.fill[phase] if phase > 0 else ''
         return self.fill[-1]*nfull+current+self.fill[0]*max(0,nempty-len(current))

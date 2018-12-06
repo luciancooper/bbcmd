@@ -2,7 +2,7 @@ from setuptools import setup,find_packages
 
 setup(
     name='bbcmd',
-    version='1.0',
+    version='1.1',
     author='Lucian Cooper',
     url='https://github.com/luciancooper/bbcmd',
     description='Baseball Statistics Simulator',
@@ -16,11 +16,10 @@ setup(
         'Programming Language :: Python :: 3.6',
     ],
     packages=find_packages(),
-    install_requires=['numpy','pandas'], #'array','argparse','re','xml','os','collections','datetime','math',
+    install_requires=['numpy','pandas','beautifulsoup4'], #'array','argparse','re','xml','os','collections','datetime','math',
     entry_points={
         'console_scripts': [
             'bbsim = bbsim.__main__:main',
-            'bbdata = bbdata.__main__:main',
             'bbscrape = bbscrape.__main__:main',
         ]
     },

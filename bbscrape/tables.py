@@ -3,6 +3,9 @@ import urllib.request
 from contextlib import closing
 from html.parser import HTMLParser
 
+
+__all__ = ['TableParser']
+
 class TableParser(HTMLParser):
     #Initializing lists
     def __init__(self,report_warnings=True):

@@ -1,5 +1,5 @@
 
-from . import BBSimError,zipmap
+from . import BBSimError,BBSimSubstitutionError,BBSimVerifyError,zipmap
 from .game import GameSim
 
 ###########################################################################################################
@@ -94,6 +94,11 @@ class RosterSim(GameSim):
         """Returns the fpos of team currently on defense"""
         return self.fpos[self.dt]
 
+    @property
+    def _catcher_(self):
+        """current catcher id"""
+        return self.fpos[self.dt][1]
+
     #------------------------------- [batting out of order] -------------------------------#
 
     def _boot(self,l):
@@ -140,11 +145,11 @@ class RosterSim(GameSim):
                     for i,b in zipmap(self._bitindexes(self.bflg),self.base):
                         if b[0]==runner: break
                     else:
-                        raise BBSimError(self.gameid,self.eid,'pinchrun error [%s] not on base'%runner)
+                        raise BBSimSubstitutionError(f'pinchrun error [{runner}] not on base')
                     self.base[i] = (pid,self.base[i][1])
                 else:
                     if self._lpos_!=lpos:
-                        raise BBSimError(self.gameid,self.eid,'Pinchit Discrepancy _lpos_[{}] lpos[{}]'.format(self._lpos_,lpos))
+                        raise BBSimSubstitutionError(f'Pinchit Discrepancy _lpos_[{self._lpos_}] lpos[{lpos}]')
                     if count!='' and count[1]=='2':
                         self._cache_resp_batter()
                 self.fpos[t][self.lpos[t][lpos]] = pid
@@ -152,7 +157,7 @@ class RosterSim(GameSim):
                 if (lpos>=0):self.lpos[t][lpos] = fpos
                 self.fpos[t][fpos] = pid
         else:
-            if fpos>9:raise BBSimError(self.gameid,self.eid,'defensive pinch sub [%i]'%fpos)
+            if fpos>9:raise BBSimSubstitutionError(f'defensive pinch sub [{fpos}]')
             if (lpos>=0):self.lpos[t][lpos] = fpos
             if fpos==0 and count in ['20','21','30','31','32']:
                 self._cache_resp_pitcher()
@@ -194,10 +199,11 @@ class RosterSim(GameSim):
         return super()._cycle_inning()
 
     #------------------------------- [event] -------------------------------#
-    def _play(self,l,ctx):
+    def _play(self,l,ctx=None):
         """ like play, from original files"""
         if self.bootflg[self.t]&2:self._bootcycle()
-        if self.safe: self._verify(l,ctx)
+        if ctx!=None:
+            self._verify(l,ctx)
         self._event(l)
 
     def _event(self,l): #e,adv,bpid
@@ -219,19 +225,19 @@ class RosterSim(GameSim):
         e = int(l[self.EVENT['code']])
         rbpid,rppid = (self._rbpid_ if e==2 else self._bpid_),(self._rppid_ if e in [3,4] else self._ppid_)
         if rbpid!=ctx[self.CTX['rbpid']]:
-            raise BBSimError(self.gameid,self.eid,'rbpid sim[%s] evt[%s]'%(rbpid,ctx[self.CTX['rbpid']]))
+            raise BBSimVerifyError(f"rbpid sim[{rbpid}] evt[{ctx[self.CTX['rbpid']]}]")
         if rppid!=ctx[self.CTX['rppid']]:
-            raise BBSimError(self.gameid,self.eid,'rppid sim[%s] evt[%s]'%(rppid,ctx[self.CTX['rppid']]))
+            raise BBSimVerifyError(f"rppid sim[{rppid}] evt[{ctx[self.CTX['rppid']]}]")
         if self._ppid_!=ctx[self.CTX['ppid']]:
-            raise BBSimError(self.gameid,self.eid,'ppid sim[%s] evt[%s]'%(self._ppid_,ctx[self.CTX['ppid']]))
+            raise BBSimVerifyError(f"ppid sim[{self._ppid_}] evt[{ctx[self.CTX['ppid']]}]")
         if self._bpid_!=ctx[self.CTX['bpid']]:
-            raise BBSimError(self.gameid,self.eid,'bpid sim[%i|%s] evt[%s|%s] %s'%(self._lpos_,self._bpid_,ctx[self.CTX['lpos']],ctx[self.CTX['bpid']],ctx[self.CTX['eid']]))
+            raise BBSimVerifyError(f"bpid sim[{self._lpos_}|{self._bpid_}] evt[{ctx[self.CTX['lpos']]}|{ctx[self.CTX['bpid']]}] {ctx[self.CTX['eid']]}")
         if self._lpos_!=int(ctx[self.CTX['lpos']]):
-            raise BBSimError(self.gameid,self.eid,'lpos sim[%i|%s] evt[%s|%s] %s'%(self._lpos_,self._bpid_,ctx[self.CTX['lpos']],ctx[self.CTX['bpid']],ctx[self.CTX['eid']]))
+            raise BBSimVerifyError(f"lpos sim[{self._lpos_}|{self._bpid_}] evt[{ctx[self.CTX['lpos']]}|{ctx[self.CTX['bpid']]}] {ctx[self.CTX['eid']]}")
 
         fpos = int(ctx[self.CTX['fpos']])
         if fpos!=0 and fpos!=11 and self._bpid_fpos_!=fpos-1:
-            raise BBSimError(self.gameid,self.eid,'fpos sim[%s] evt[%s] %s'%(self._bpid_fpos_,fpos-1,ctx[self.CTX['eid']]))
+            raise BBSimVerifyError(f"fpos sim[{self._bpid_fpos_}] evt[{fpos-1}] {ctx[self.CTX['eid']]}")
 
     #------------------------------- [str] -------------------------------#
 

@@ -1,4 +1,4 @@
-from .stat import StatSim
+from .core.stat import StatSim
 from .core.handed import HandedRosterSim
 
 class HandedRosterStatSim(StatSim,HandedRosterSim):
@@ -18,7 +18,7 @@ class HandedRosterStatSim(StatSim,HandedRosterSim):
         self.yinx = None
         super().endSeason()
 
-    #------------------------------- [lib/game] -------------------------------#
+    #------------------------------- [sim](Game) -------------------------------#
 
     def _initGame(self,*info):
         super()._initGame(*info)

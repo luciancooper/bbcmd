@@ -10,15 +10,15 @@ class MainMethod():
         Sources include:
             bbr        baseball-reference.com
             fg         fangraphs.com
-            spotrac    spotrac.com
+            sr         spotrac.com
 
         Commands vary given the source, and are listed as follows according to source:
             bbr        [team,teamId]
             fg         [advbat,parkfactor,playerId]
-            spotrac    []
+            sr         [playertable,captable]
         """)
 
-        parser.add_argument('source',choices=['bbr','fg','spotrac'],help='Source to scrape data from')
+        parser.add_argument('source',choices=['bbr','fg','sr'],help='Source to scrape data from')
         parser.add_argument('command',help='Command which varies depending on the source')
         args = parser.parse_args(sys.argv[1:3])
         if not hasattr(self, f"{args.source}_{args.command}"):
@@ -110,13 +110,35 @@ class MainMethod():
 
     #----------------------------------------[Spotrac]----------------------------------------#
 
-    def spotrac(self):
-        print("Scraping from spotrac.com has not been implemented yet",file=sys.stderr)
-        #parser = argparse.ArgumentParser(description='Download Data from spotrac.com')
-        #parser.add_argument('years',type=parse_years,help='Target MLB seasons')
-        #args = parser.parse_args(sys.argv[2:])
+    def sr_captable(self):
+        from .spotrac import spotrac_keys,spotrac_captable
+        parser = argparse.ArgumentParser(description='Download Team Captables from spotrac.com')
+        parser.add_argument('years',type=parse_years,help='Target MLB seasons')
+        args = parser.parse_args(sys.argv[3:])
+        keys = [*spotrac_keys(args.years)]
+        prog = IncrementalBar(prefix='Scraping').iter(keys)
+        for l in spotrac_captable(*next(prog)):
+            print(l,file=sys.stdout)
+        for year,team,url in prog:
+            tbl = iter(spotrac_captable(year,team,url))
+            next(tbl)
+            for l in tbl:
+                print(l,file=sys.stdout)
 
-
+    def sr_playertable(self):
+        from .spotrac import spotrac_keys,spotrac_playertable
+        parser = argparse.ArgumentParser(description='Download Team PlayerTables from spotrac.com')
+        parser.add_argument('years',type=parse_years,help='Target MLB seasons')
+        args = parser.parse_args(sys.argv[3:])
+        keys = [*spotrac_keys(args.years)]
+        prog = IncrementalBar(prefix='Scraping').iter(keys)
+        for l in spotrac_playertable(*next(prog)):
+            print(l,file=sys.stdout)
+        for year,team,url in prog:
+            tbl = iter(spotrac_playertable(year,team,url))
+            next(tbl)
+            for l in tbl:
+                print(l,file=sys.stdout)
 
 def main():
     MainMethod()

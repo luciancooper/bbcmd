@@ -1,4 +1,4 @@
-from .stat import StatSim
+from .core.stat import StatSim
 from .core.roster import RosterSim
 
 ###########################################################################################################
@@ -22,7 +22,7 @@ class RosterStatSim(StatSim,RosterSim):
         self.yinx = None
         super().endSeason()
 
-    #------------------------------- [lib/game] -------------------------------#
+    #------------------------------- [sim](Game) -------------------------------#
 
     def _initGame(self,*info):
         super()._initGame(*info)
@@ -64,14 +64,58 @@ class PlayerPositionOutSim(RosterStatSim):
             self._stat(self.dt,pid,pos)
 
 
+
+###########################################################################################################
+#                                         RBIStatSim                                                      #
+###########################################################################################################
+
+class PlayerRBIStatSim(RosterStatSim):
+    _prefix_ = "RBI"
+    _dcol = ['RBI']+['O','E']+['S','D','T','HR']+['BB','IBB','HBP']+['K','I']+['SF','SH']+['GDP']
+
+    def __init__(self,index,**kwargs):
+        super().__init__(index,**kwargs)
+        self.estat = None
+
+    #------------------------------- [play] -------------------------------#
+    # runner_pid: the runner who is scoring
+    # runner_ppid: the pitcher responsible for putting the runner on base
+    # resp_batter: the responsible batter for RBI credits
+    # resp_pitcher: the currently responsible pitcher not used here
+    def scorerun(self,flag,runner_pid,runner_ppid,resp_batter,resp_pitcher):
+        super().scorerun(flag,runner_pid,runner_ppid,resp_batter,resp_pitcher)
+        er,ter,rbi = (int(x) for x in flag[1:])
+        if rbi:
+            self._stats(self.t,resp_batter,('RBI',self.estat))
+
+    def _event(self,l):
+        #    0   1   2   3     4     5    6   7   8   9   10
+        # ('O','E','K','BB','IBB','HBP','I','S','D','T','HR','WP','PB','DI','OA','RUNEVT','BK','FLE')
+        code = int(l[self.EVENT['code']])
+        if code<=10:
+            e = l[self.EVENT['evt']].split('+')
+            # (0,1) (2,3,4) (5,6,7,8,9,10)
+            if code<=1:
+                # O,E
+                self.estat = e[-1]
+            elif code<=4:
+                # K,BB,IBB
+                self.estat = e[0]
+            else:
+                # HBP,I,S,D,T,HR
+                self.estat = e[0]
+
+        super()._event(l)
+        self.estat = None
+
+
 ###########################################################################################################
 #                                         PIDStatSim                                                      #
 ###########################################################################################################
 
 class PlayerBattingStatSim(RosterStatSim):
-
     _prefix_ = "PID"
-    _dcol = ['PA','AB','S','D','T','HR','BB','IBB','HBP','K','I','SH','SF','R','RBI','GDP']+['SB','CS','PO']+['P','A','E']
+    _dcol = ['PA','AB']+['S','D','T','HR']+['BB','IBB','HBP']+['K','I']+['SH','SF']+['GDP']+['R','RBI']+['SB','CS','PO']
 
     #------------------------------- [stats] -------------------------------#
 
@@ -79,14 +123,6 @@ class PlayerBattingStatSim(RosterStatSim):
         for re in runevts:
             pid = self.base[int(re[-1])-1][0]
             self._stat(self.t,pid,re[-3:-1])
-
-    def _stats_defense(self,a,p,e):
-        for i in [x for x in a if x!='X']:
-            self._stat(self.dt,self.fpos[self.dt][int(i)-1],'A')
-        for i in [x for x in p if x!='X']:
-            self._stat(self.dt,self.fpos[self.dt][int(i)-1],'P')
-        for i in [x for x in e if x!='X']:
-            self._stat(self.dt,self.fpos[self.dt][int(i)-1],'E')
 
     #------------------------------- [play] -------------------------------#
     # runner_pid: the runner who is scoring
@@ -101,7 +137,6 @@ class PlayerBattingStatSim(RosterStatSim):
             self._stat(self.t,resp_batter,'RBI')
 
     def _event(self,l):
-        self._stats_defense(*l[self.EVENT['dfn']])
         evt,code = l[self.EVENT['evt']],int(l[self.EVENT['code']])
         e = evt.split('+')
         if code<=10:
@@ -119,39 +154,62 @@ class PlayerBattingStatSim(RosterStatSim):
                 self._stat(self.t,bpid,ekey)
                 if len(e):
                     if e[0] in ['WP','PB','OA','DI']:
-                        if e[0]=='PB':
-                            pass
                         e = e[1:]
                     self._stats_runevt(*e)
-
             else:
                 # HBP,I,S,D,T,HR
                 ekey = e[0]
                 bpid,ppid = self._bpid_,self._ppid_
                 self._stat(self.t,bpid,ekey)
-
             self._stat(self.t,bpid,'PA') # Plate Appearance
             if self.AB[ekey]:
                 self._stat(self.t,bpid,'AB')
-
         elif code<=14:
             if len(e)>1:
                 self._stats_runevt(*e[1:])
-            if code==12:#PB
-                pass
         elif code==15:
             self._stats_runevt(*e)
         super()._event(l)
 
+
 ###########################################################################################################
-#                                         PPIDStatSim                                                     #
+#                                         Fielding                                                        #
+###########################################################################################################
+
+class PlayerFieldingStatSim(RosterStatSim):
+    _prefix_ = "Fielding"
+    _dcol = ['P','A','E']+['PB']
+
+    def _stats_defense(self,a,p,e):
+        for i in [x for x in a if x!='X']:
+            self._stat(self.dt,self.fpos[self.dt][int(i)-1],'A')
+        for i in [x for x in p if x!='X']:
+            self._stat(self.dt,self.fpos[self.dt][int(i)-1],'P')
+        for i in [x for x in e if x!='X']:
+            self._stat(self.dt,self.fpos[self.dt][int(i)-1],'E')
+
+    def _event(self,l):
+        # ('O','E','K','BB','IBB','HBP','I','S','D','T','HR','WP','PB','DI','OA','RUNEVT','BK','FLE')
+        self._stats_defense(*l[self.EVENT['dfn']])
+        code = int(l[self.EVENT['code']])
+        if code == 12: #PB
+            self._stat(self.dt,self._catcher_,'PB')
+        elif code <= 4 and code >= 2:
+            # K,BB,IBB
+            e=l[self.EVENT['evt']].split('+')[1:]
+            if len(e)>0 and e[0]=='PB':
+                self._stat(self.dt,self._catcher_,'PB')
+        super()._event(l)
+
+###########################################################################################################
+#                                         Pitching                                                        #
 ###########################################################################################################
 
 class PlayerPitchingStatSim(RosterStatSim):
-
-    _dcol = ['W','L','SV','IP','BF','R','ER','S','D','T','HR','BB','HBP','IBB','K','BK','WP','PO','GDP']
-
+    
     _prefix_ = "PPID"
+    _dcol = ['W','L','SV']+['IP','BF']+['R','ER']+['S','D','T','HR']+['BB','HBP','IBB']+['K']+['BK','WP','PO']+['GDP']
+
     #------------------------------- [play] -------------------------------#
 
     # runner_pid: the runner who is scoring
@@ -190,8 +248,6 @@ class PlayerPitchingStatSim(RosterStatSim):
                     if e[0] in ['WP','PB','OA','DI']:
                         if e[0]=='WP':
                             self._stat(self.dt,self._ppid_,e[0])
-                        elif e[0]=='PB':
-                            pass
                         e = e[1:]
             else:
                 # HBP,I,S,D,T,HR
@@ -202,8 +258,6 @@ class PlayerPitchingStatSim(RosterStatSim):
         elif code<=14:
             if code==11:#WP
                 self._stat(self.dt,self._ppid_,e[0])
-            elif code==12:#PB
-                pass
         elif code==16: #BLK
             self._stat(self.dt,self._ppid_,e[0])
         super()._event(l)
