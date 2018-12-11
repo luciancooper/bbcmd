@@ -1,7 +1,23 @@
 import sys,os,argparse
 from .data.lib import bbdatalib
-from cmdtools.progress.multi import MultiBar
-from cmdtools import parse_years,verify_dir
+from cmdprogress.multi import MultiBar
+
+def verify_dir(path):
+    if len(path) and not os.path.exists(path):
+        verify_dir(os.path.dirname(path))
+        os.mkdir(path)
+
+def parse_years(arg):
+    years = set()
+    for a in arg.split(','):
+        if '-' in a:
+            y0,y1 = map(int,a.split('-'))
+            years |= set(range(y0,y1+1))
+        else:
+            years |= {int(a)}
+    years = list(years)
+    years.sort()
+    return years
 
 # ------------------------------------------------ setup ------------------------------------------------ #
 
@@ -58,7 +74,7 @@ def runsim(sim,data):
     for gd in bar.iter(data):
         sim.initSeason(gd)
         with gd:
-            for g in bar.iter(gd,prefix=str(gd.year)):
+            for g in bar.iter(gd):
                 sim.simGame(g)
         sim.endSeason()
     return sim
@@ -71,48 +87,41 @@ def basic_simulation(fn):
             sim.to_csv(sys.stdout)
     return wrapper
 
-
+def test_simulation(fn):
+    def wrapper(args):
+        data = initializeLib(args.verify,years=args.years)
+        sim = runsim(fn(args,data),data)
+    return wrapper
 
 # ------------------------------------------------ test ------------------------------------------------ #
 
-def test_game(args):
+@test_simulation
+def test_game(args,data):
     from .core.game import GameSim
-    data = initializeLib(args.verify,years=args.years)
-    sim = GameSim()
-    runsim(sim,data)
+    return GameSim()
 
-
-def test_roster(args):
+@test_simulation
+def test_roster(args,data):
     from .core.roster import RosterSim
-    data = initializeLib(args.verify,years=args.years)
-    sim = RosterSim()
-    runsim(sim,data)
+    return RosterSim()
 
-def test_handed(args):
+@test_simulation
+def test_handed(args,data):
     from .core.handed import HandedRosterSim
-    data = initializeLib(args.verify,years=args.years)
-    sim = HandedRosterSim()
-    runsim(sim,data)
+    return HandedRosterSim()
 
 # ------------------------------------------------ gamescore ------------------------------------------------ #
 
 @basic_simulation
-def gamescore(args):
-    from .games import GameScoreSim
-    data = initializeLib(args.verify,years=args.years)
-    sim = GameScoreSim(data.gidIndex)
-    runsim(sim,data)
-
+def gamescore(args,data):
+    from .gamescore import GameScoreSim
+    return GameScoreSim(data.gidIndex)
 
 # ------------------------------------------------ [] ------------------------------------------------ #
 @basic_simulation
 def batting(args,data):
-    if args.nopitcher:
-        from .aggstat import NPLeagueBattingSim
-        return NPLeagueBattingSim(data.leagueIndex)
-    else:
-        from .aggstat import AggBattingSim
-        return AggBattingSim(getattr(data,args.group))
+    from .aggstat import AggBattingSim
+    return AggBattingSim(getattr(data,args.group),nopitcher_flag=args.nopitcher)
 
 @basic_simulation
 def pitching(args,data):
@@ -126,7 +135,7 @@ def fielding(args,data):
 
 @basic_simulation
 def runsper(args,data):
-    from .season import RunsPerSim
+    from .runsper import RunsPerSim
     return RunsPerSim(data.yearIndex)
 
 # ------------------------------------------------ player ------------------------------------------------ #
@@ -134,31 +143,31 @@ def runsper(args,data):
 @basic_simulation
 def player_batting(args,data):
     if args.handed == True:
-        from .player_handed import HandedPlayerBattingStatSim
-        return HandedPlayerBattingStatSim(data.pidHandedIndex)
+        from .player_handed import HandedPlayerBattingSim
+        return HandedPlayerBattingSim(data.pidHandedIndex)
     else:
-        from .player import PlayerBattingStatSim
-        return PlayerBattingStatSim(data.pidIndex)
+        from .player import PlayerBattingSim
+        return PlayerBattingSim(data.pidIndex)
 
 
 @basic_simulation
 def player_fielding(args,data):
-    from .player import PlayerFieldingStatSim
-    return PlayerFieldingStatSim(data.pidIndex)
+    from .player import PlayerFieldingSim
+    return PlayerFieldingSim(data.pidIndex)
 
 @basic_simulation
 def player_pitching(args,data):
     if args.handed == True:
-        from .player_handed import HandedPlayerPitchingStatSim
-        return HandedPlayerPitchingStatSim(data.ppidHandedIndex)
+        from .player_handed import HandedPlayerPitchingSim
+        return HandedPlayerPitchingSim(data.ppidHandedIndex)
     else:
-        from .player import PlayerPitchingStatSim
-        return PlayerPitchingStatSim(data.ppidIndex)
+        from .player import PlayerPitchingSim
+        return PlayerPitchingSim(data.ppidIndex)
 
 @basic_simulation
 def player_rbi(args,data):
-    from .player import PlayerRBIStatSim
-    return PlayerRBIStatSim(data.pidIndex)
+    from .player import PlayerRBISim
+    return PlayerRBISim(data.pidIndex)
 
 
 # ------------------------------------------------ appearance ------------------------------------------------ #
@@ -186,89 +195,44 @@ def appearance_simple(args,data):
 
 # ------------------------------------------------ advcalc ------------------------------------------------ #
 
-def calc_war(args):
-    # bbsim calc war
-    ### INCOMPLETE #####
-    import numpy as np
-    import pandas as pd
-    from .woba import REMSim,wOBAWeightSim
-    from .aggstat import AggBattingSim,NPLeagueStatSim
-
-    data = initializeLib(args.verify,years=args.years)
-
-    yIndex = data.yearIndex
-    # Sim Run Exp Matrix
-
-    rem = runsim(REMSim(yIndex),data)
-    # Sim wOBA linear weights
-    oba = runsim(wOBAWeightSim(yIndex),data)
-    # Sim MLB Batting Stats
-    mlb = runsim(AggBattingSim(yIndex),data)
-
-    # Sim Non Pitcher League Batting Stats
-    lgue = self._runsim_(NPLeagueStatSim(data.leagueIndex),data)
-
-    # Calculate wOBA weights
-    linear_weights = ['BB','HBP','S','D','T','HR']
-
-    # Calc adjusted linear weights
-    adjlw = oba.adjWeights()
-    # League OBP (On Base Percentage)
-    obp = mlb['(S+D+T+HR+BB+HBP)/(AB+BB+HBP+SF)']
-    # League wOBA
-    woba = (mlb[linear_weights]*adjlw[linear_weights].values).sum(axis=1,keepdims=True)/mlb['AB+BB+SF+HBP']
-    # wOBA Scale
-    woba_scale = obp / woba
-    # Final wOBA linear weights
-    lw = adjlw.values * woba_scale
-
-    # DataFrame container linear weights
-    #df = pd.DataFrame(np.c_[woba,woba_scale,lw],index=inx.pandas(),columns=['woba','woba_Scale']+linear_weights)
-    df_lw = pd.DataFrame(lw,index=yIndex.pandas(),columns=linear_weights)
-
-    lg_df = lgue.df()
-    # [BB,HBP,S,D,T,HR]
-    (lg_df[linear_weights].groupby('league').apply(lambda x: x * df_lw)).sum(axis=1)
-    lg_woba = lgue[linear_weights]
-    lgue['AB+BB+SF+HBP']
-
-    R_PA = mlb["R/PA"]
-    print(df,file=sys.stderr)
-    return df
-
-def calc_woba(args):
-    # bbsim calc woba
-    import numpy as np
-    import pandas as pd
+def advcalc_woba(args):
     from .woba import REMSim,wOBAWeightSim
     from .aggstat import AggBattingSim
-
+    from .advcalc import calc_woba
     data = initializeLib(args.verify,years=args.years)
-
     yIndex = data.yearIndex
-    # Sim Run Exp Matrix
+    print("Simulating run expectancy matrix",file=sys.stderr)
     rem = runsim(REMSim(yIndex),data)
-    # Sim wOBA linear weights
-    oba = runsim(wOBAWeightSim(yIndex),data)
-    # Sim MLB Batting Stats
+    print("Simulating wOBA linear weights",file=sys.stderr)
+    oba = runsim(wOBAWeightSim(yIndex,rem),data)
+    print("Simulating season batting stats",file=sys.stderr)
     mlb = runsim(AggBattingSim(yIndex),data)
     # Calculate wOBA weights
-    linear_weights = ['BB','HBP','S','D','T','HR']
-    # Calc adjusted linear weights
-    adjlw = oba.adjWeights()
-    # League OBP (On Base Percentage)
-    obp = mlb['(S+D+T+HR+BB+HBP)/(AB+BB+HBP+SF)']
-    # League wOBA
-    woba = (mlb[linear_weights]*adjlw[linear_weights].values).sum(axis=1,keepdims=True)/mlb['AB+BB+SF+HBP']
-    # wOBA Scale
-    woba_scale = obp / woba
-    # Final wOBA linear weights
-    lw = adjlw.values * woba_scale
-    # DataFrame container linear weights
-    df = pd.DataFrame(np.c_[woba,woba_scale,lw],index=yIndex.pandas(),columns=['woba','woba_Scale']+linear_weights)
-    print(df,file=sys.stderr)
-    return df
+    df = calc_woba(oba,mlb)
+    print("wOBA calculation complete",file=sys.stderr)
+    df.to_csv(sys.stdout)
 
+def advcalc_war(args):
+    from .woba import REMSim,wOBAWeightSim
+    from .aggstat import AggBattingSim
+    from .player import PlayerBattingSim
+    from .advcalc import calc_war_battingfactor
+    data = initializeLib(args.verify,years=args.years)
+    yIndex = data.yearIndex
+    print("Simulating run expectancy matrix",file=sys.stderr)
+    rem = runsim(REMSim(yIndex),data)
+    print("Simulating wOBA linear weights",file=sys.stderr)
+    oba = runsim(wOBAWeightSim(yIndex,rem),data)
+    print("Simulating season batting stats",file=sys.stderr)
+    mlb = runsim(AggBattingSim(yIndex),data)
+    print("Simulating non-pitcher league batting stats",file=sys.stderr)
+    league = runsim(AggBattingSim(data.leagueIndex,nopitcher_flag=True),data)
+    print("Simulating player batting stats",file=sys.stderr)
+    player_batting = runsim(PlayerBattingSim(data.pidIndex),data)
+    # Calc batting Factor
+    df = calc_war_battingfactor(oba,mlb,league.df(),data.parkfactors,player_batting.df())
+    print("WAR batting factor calculation complete",file=sys.stderr)
+    df.to_csv(sys.stdout)
 
 def main():
     parser = argparse.ArgumentParser(prog='bbsim',description='Baseball Data Simulator',epilog='Please consult https://github.com/luciancooper/bbcmd for further instruction')
@@ -374,9 +338,9 @@ def main():
     parser_advcalc = subparsers.add_parser('advcalc',help='advcalc command help')
     parser_advcalc_subparsers = parser_advcalc.add_subparsers(title="Available calculations",metavar='calc')
     parser_advcalc_war = parser_advcalc_subparsers.add_parser('war',parents=[verify_parser],help='calculate war',description="WAR Calculation")
-    parser_advcalc_war.set_defaults(run=calc_war)
+    parser_advcalc_war.set_defaults(run=advcalc_war)
     parser_advcalc_woba = parser_advcalc_subparsers.add_parser('woba',parents=[verify_parser],help='calculate woba',description="WAR Calculation")
-    parser_advcalc_woba.set_defaults(run=calc_woba)
+    parser_advcalc_woba.set_defaults(run=advcalc_woba)
 
     # ------------------------------------------------  ------------------------------------------------ #
     args = parser.parse_args()

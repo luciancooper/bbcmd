@@ -1,6 +1,6 @@
 
 #import bbsrc
-from . import BBSimError,BBSimVerifyError
+from . import BBSimError,BBSimVerifyError,BBSimLogicError,BBSimSubstitutionError
 
 # NOSIMLIST --> 20070926SEACLE1
 
@@ -43,6 +43,8 @@ class GameSim():
 
     _prefix_ = ''
 
+    # AB = O+E+K+S+D+T+HR
+    # PA = O+E+K+BB+IBB+HBP+I+S+D+T+HR
 
     AB = { 'O':1,'E':1,'SH':0,'SF':0,'I':0,'K':1,'BB':0,'IBB':0,'HBP':0,'S':1,'D':1,'T':1,'HR':1 }
     E_STR = ('O','E','K','BB','IBB','HBP','I','S','D','T','HR','WP','PB','DI','OA','RUNEVT','BK','FLE')
@@ -79,6 +81,8 @@ class GameSim():
     LINEUP = { 'asp':0,'asl':slice(1,10),'away':slice(0,10),'hsp':10,'hsl':slice(11,20),'home':slice(10,20) }
     FINAL = {'wp':0,'lp':1,'sv':2,'er':3}
 
+    IS_RBI = (True,True,True,True,True,True,True,True,True,True,True,False,False,False,False,False,False,False)
+
 
     def __init__(self):
         # Year
@@ -89,6 +93,7 @@ class GameSim():
         self.eid = None
         # Current Event Code
         self.ecode = None
+        self.emod = None
         # Teams
         self.teams = None
         # Leagues
@@ -103,8 +108,12 @@ class GameSim():
         self.i,self.t,self.o=0,0,0
         # Box Score
         self.score,self.lob = [0,0],[0,0]
-
-
+        # Batting Order
+        self.lpos = [None]*9,[None]*9
+        # At bat index
+        self.abinx = [0,0]
+        # Batting out of turn - flag indicating if team is the process of batting out of order (very rare)
+        self.bootflg,self.boot=[0,0],[[],[]]
 
     #------------------------------- (Sim)[frame] -------------------------------#
 
@@ -130,8 +139,6 @@ class GameSim():
         for i,l in gl:
             try:
                 if i=='E':
-                    self.eid += 1
-                    self.ecode = int(l[0][self.EVENT['code']])
                     self._play(*l)
                 elif i=='S':
                     self._sub(l)
@@ -165,6 +172,10 @@ class GameSim():
         self.bflg = 0
         self.i,self.t,self.o=0,0,0
         self.score,self.lob = [0,0],[0,0]
+        self.lpos[0][:],self.lpos[1][:]=[None]*9,[None]*9
+        self.abinx[:]=0,0
+        if self.bootflg[0]:self.bootflg[0],self.boot[0]=0,[]
+        if self.bootflg[1]:self.bootflg[1],self.boot[1]=0,[]
 
 
     #------------------------------- [Properties] -------------------------------#
@@ -180,13 +191,45 @@ class GameSim():
     #------------------------------- [Sim Action] -------------------------------#
 
     def _lineup(self,l):
-        pass
+        for x,a,h in zip(range(0,9),l[self.LINEUP['asl']],l[self.LINEUP['hsl']]):
+            self.lpos[0][x] = int(a[-1])
+            self.lpos[1][x] = int(h[-1])
+
+    #------------------------------- [sub] -------------------------------#
 
     def _sub(self,l):
-        pass
+        """Performs linup substitution"""
+        # order=lpos  pos=fpos
+        t,lpos,fpos,offense = tuple(int(l[x]) for x in [self.SUB['t'],self.SUB['lpos'],self.SUB['fpos'],self.SUB['offense']])
+        if offense:
+            if (fpos>9):
+                if fpos == 10:
+                    # PINCH HIT
+                    if self._lpos_!=lpos:
+                        raise BBSimSubstitutionError(f'Pinchit Discrepancy _lpos_[{self._lpos_}] lpos[{lpos}]')
+            else:
+                if (lpos>=0):
+                    self.lpos[t][lpos] = fpos
+        else:
+            if fpos>9:raise BBSimSubstitutionError(f'defensive pinch sub [{fpos}]')
+            if (lpos>=0):
+                self.lpos[t][lpos] = fpos
+
+    #------------------------------- [boot] -------------------------------#
 
     def _boot(self,l):
+        """handles the rare case of when a team bats out of order"""
         assert int(l[self.BOOT['t']])==self.t,'BOOT team error b[%s] != sim[%i]'%(l[self.BOOT['t']],self.t)
+        self.boot[self.t] += [int(l[self.BOOT['lpos']])]
+        self.bootflg[self.t] = 1
+
+    def _bootcycle(self):
+        """Ensures the correct player is currently batting in the event of a team batting out of order"""
+        i,j = self.abinx[self.t],max(self.boot[self.t])
+        self.abinx[self.t] = (self.abinx[self.t]+(j-i+1))%9
+        self.bootflg[self.t],self.boot[self.t] = 0,[]
+
+    #------------------------------- [adj] -------------------------------#
 
     def _padj(self,l):
         pass
@@ -223,6 +266,20 @@ class GameSim():
     @property
     def dt(self):
         return self.t^1
+
+
+    #------------------------------- [batting-order] -------------------------------#
+
+    @property
+    def _lpos_(self):
+        """lineup position of batter"""
+        return self.boot[self.t][-1] if self.bootflg[self.t] else self.abinx[self.t]
+
+    @property
+    def _bpid_fpos_(self):
+        """field position of batter"""
+        return self.lpos[self.t][self._lpos_]
+
     #------------------------------- [play] -------------------------------#
 
     def _advance(self,badv,radv):
@@ -247,11 +304,20 @@ class GameSim():
                 self.scorerun(badv[2:])
             else:
                 self.bflg|=1<<int(badv[0])-1
-            return True
-        return False
+            self._cycle_lineup()
 
     def scorerun(self,flag,*args):
         self.score[self.t]+=1
+
+    def _check_rbi_(self,rbi,norbi):
+        if rbi == 1 and norbi == 1:
+            raise BBSimLogicError("Both rbi and norbi flags present")
+        if rbi == 1: return True
+        if norbi == 1: return False
+        return (self.IS_RBI[self.ecode] and "GDP" not in self.emod)
+
+
+
 
     def outinc(self):
         self.o+=1
@@ -266,12 +332,37 @@ class GameSim():
         self.i += 1
         self.t ^= 1
 
-    #------------------------------- [event] -------------------------------#
+    def _cycle_lineup(self):
+        """Cycles to the next batter"""
+        if self.bootflg[self.t]:
+            self.bootflg[self.t]<<=1
+        else:
+            self.abinx[self.t] = (self.abinx[self.t]+1)%9
+
+
+    #------------------------------- [play] -------------------------------#
+
     def _play(self,l,ctx=None):
         """ Takes additional Safety Inputs """
+        self.eid += 1
+        self.ecode = int(l[self.EVENT['code']])
+        self.emod = l[self.EVENT['mod']].split('/')
+        if self.bootflg[self.t]&2:self._bootcycle()
         if ctx!=None:
             self._verify(l,ctx)
         self._event(l)
+        self.ecode = None
+        self.emod = None
+
+    #------------------------------- [event] -------------------------------#
+
+    def _event(self,l):
+        """ Idea is this should be executable without ctx safety net """
+        self._advance(l[self.EVENT['badv']],l[self.EVENT['radv']])
+        if self.o==3:
+            self._cycle_inning()
+
+    #------------------------------- [verify] -------------------------------#
 
     def _verify(self,l,ctx):
         """ Uses safety line inputs to ensure the simulation is not corrupted """
@@ -285,12 +376,14 @@ class GameSim():
         a,h = (int(x) for x in ctx[self.CTX['score']])
         if self.score[0]!=a or self.score[1]!=h:
             raise BBSimVerifyError(f'Score Discrepency [{self.score[0]},{self.score[1]}|{a},{h}]')
+        if self._lpos_!=int(ctx[self.CTX['lpos']]):
+            raise BBSimVerifyError(f"lpos sim[{self._lpos_}] evt[{ctx[self.CTX['lpos']]}]")
+        fpos = int(ctx[self.CTX['fpos']])
+        if fpos!=0 and fpos!=11 and self._bpid_fpos_!=fpos-1:
+            raise BBSimVerifyError(f"fpos sim[{self._bpid_fpos_}] evt[{fpos-1}]")
 
 
-    def _event(self,l):
-        """ Idea is this should be executable without ctx safety net """
-        self._advance(l[self.EVENT['badv']],l[self.EVENT['radv']])
-        if self.o==3:self._cycle_inning()
+
 
 
     #------------------------------- [str] -------------------------------#

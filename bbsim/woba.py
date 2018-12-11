@@ -55,8 +55,7 @@ class REMSim(StatSim):
         super().scorerun(*args)
 
     def _event(self,l):
-        code = int(l[self.EVENT['code']])
-        if not self.paonly or self.E_PA[code]:
+        if not self.paonly or self.E_PA[self.ecode]:
             self.states[self.baseoutstate,1]+=1
         super()._event(l)
 
@@ -126,12 +125,11 @@ class wOBAWeightSim(StatSim):
     #------------------------------- [play] -------------------------------#
 
     def _event(self,l):
-        code = int(l[self.EVENT['code']])
-        if code<=10:
+        if self.ecode<=10:
             s,r = self.baseoutstate,self.score[self.t]
             self._advance(l[self.EVENT['badv']],l[self.EVENT['radv']])
             e,r = self.baseoutstate,self.score[self.t]-r
-            self._stat(self.E_STR[code],self.rem.calc24(s,e,r))
+            self._stat(self.E_STR[self.ecode],self.rem.calc24(s,e,r))
         else:
             self._advance(l[self.EVENT['badv']],l[self.EVENT['radv']])
         if self.o==3:

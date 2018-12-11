@@ -26,12 +26,11 @@ class RunsPerSim(StatSim):
     #------------------------------- [Runs per PA] -------------------------------#
 
     def _event(self,l):
-        code = int(l[self.EVENT['code']])
-        if code<=10:
+        if self.ecode<=10:
             self._stat("PA",1)
         super()._event(l)
 
-
+    
     def _endGame(self):
         self._stat('R',self.score[0]+self.score[1])
         self._stat('IP',self.i)
@@ -64,7 +63,7 @@ class RunsPerSim(StatSim):
         return pd.Series(runs/pa,index=self.index.pandas(),name='R/PA')
 
     def _iter_csv(self):
-        yield '%s,%s,R/W,R/O,R/PA'%(','.join(str(x) for x in self.index.ids),','.join(self._dcols))
+        yield '%s,%s,R/W,R/O,R/PA'%(','.join(str(x) for x in self.index.ids),','.join(self._dcol))
         r,pa,o,ip = self.mapCol(['R','PA','O','IP'])
         for inx,data in zip(self.index,self.matrix):
             rpw = 9 * (data[r] / (data[ip] / 2)) * 1.5 + 3

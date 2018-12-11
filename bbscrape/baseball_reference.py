@@ -27,7 +27,7 @@ def bbr_teamkeys(team = None,year = None):
 
 # Beautiful Soup Parsing Utilities
 def parse_tag(tag):
-    return ''.join(parse_tag(x) if x.__class__.__name__ == 'Tag' else str(x) for x in tag.contents)
+    return ''.join(parse_tag(x) if x.__class__.__name__ == 'Tag' else str(x).replace(',','') for x in tag.contents)
 
 def parse_pid(th):
     last,first = th.get('csk').split(',')
@@ -54,6 +54,25 @@ def bbr_team_table(year,team,tableId):
 # 'team_batting'
 # 'team_pitching'
 
+# ------------------------------------------------------------------------------ #
+
+def bbr_salary_table(year,team):
+    url = f"https://www.baseball-reference.com/teams/{team}/{year}.shtml"
+    tparser = TableParser(report_warnings=False)
+    table = tparser.feed_url(url)['appearances']
+    soup = BeautifulSoup(table, 'html.parser')
+    yield 'year,team,player,salary'
+    # head
+    head = [parse_tag(th) for th in soup.select_one("thead").select_one("tr").children][1:]
+    if 'Salary' not in head:
+        return
+    salary_inx = head.index('Salary')
+    prefix = [str(year),team]
+    for tr in soup.select_one('tbody').select('tr'):
+        pid = re.search(r'[\w\d]+(?=\.shtml)',tr.select_one('th').select_one('a').get('href')).group(0)
+        yield ','.join(prefix+[pid]+[parse_tag(tr.select('td')[salary_inx]).replace('$','')])
+
+# ------------------------------------------------------------------------------ #
 
 def bbr_teamids_year(year):
     url = f"https://www.baseball-reference.com/leagues/MLB/{year}.shtml"

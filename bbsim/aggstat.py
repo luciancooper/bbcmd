@@ -3,13 +3,13 @@ import numpy as np
 from .core.stat import StatSim
 from .core.roster import RosterSim
 
-__all__ = ['AggBattingSim','AggPitchingSim','AggFieldingSim','NPLeagueBattingSim']
+__all__ = ['AggBattingSim','AggPitchingSim','AggFieldingSim']
 
 # -------------------------------------------------- GameStatSim -------------------------------------------------- #
 
 class GameStatSim(StatSim):
     _prefix_ = 'Game Stat'
-
+    
     def __init__(self,index,**kwargs):
         super().__init__(index,**kwargs)
         self._data = np.zeros((2,self.ncol),dtype=np.dtype(self.dtype))
@@ -28,7 +28,6 @@ class GameStatSim(StatSim):
     def _stat(self,t,stat,inc=1):
         j = self.icol(stat)
         self._data[t,j] += inc
-
 
 # -------------------------------------------------- SeasonStat -------------------------------------------------- #
 
@@ -139,6 +138,11 @@ class AggBattingSim():
             return object.__new__(LeagueBattingSim)
         return object.__new__(SeasonBattingSim)
 
+    def __init__(self,*args,nopitcher_flag=False,**kwargs):
+        super().__init__(*args,**kwargs)
+        self.nopitcher_flag = nopitcher_flag
+
+
     def _stats_runevt(self,*runevts):
         # SB,CS,PO
         for re in runevts:
@@ -147,24 +151,22 @@ class AggBattingSim():
     def scorerun(self,flag,*args):
         super().scorerun(flag,*args)
         self._stat(self.t,'R')
-        er,ter,rbi = (int(x) for x in flag[1:])
-        if rbi: self._stat(self.t,'RBI')
+        ur,tur,rbi,norbi = (int(x) for x in flag[1:])
+        if self._check_rbi_(rbi,norbi):
+            self._stat(self.t,'RBI')
 
     #------------------------------- [play] -------------------------------#
 
     def _event(self,l):
-        evt,code = l[self.EVENT['evt']],int(l[self.EVENT['code']])
-        e = evt.split('+')
-        if code<=10:
+        e = l[self.EVENT['evt']].split('+')
+        if self.ecode<=10:
             # (0,1) (2,3,4) (5,6,7,8,9,10)
-            if code<=1:
+            if self.ecode<=1:
                 # O,E / SF,SH
                 ekey = e[-1]
-                self._stat(self.t,ekey)
-            elif code<=4:
+            elif self.ecode<=4:
                 # K,BB,IBB
                 ekey,e=e[0],e[1:]
-                self._stat(self.t,ekey)
                 if len(e):
                     if e[0] in ['WP','PB','OA','DI']:
                         e = e[1:]
@@ -172,11 +174,14 @@ class AggBattingSim():
             else:
                 # HBP,I,S,D,T,HR
                 ekey = e[0]
+            if self.nopitcher_flag == False or self._bpid_fpos_ != 0:
                 self._stat(self.t,ekey)
-        elif code<=14:
+                if 'GDP' in self.emod:
+                    self._stat(self.t,'GDP')
+        elif self.ecode<=14:
             if len(e)>1:
                 self._stats_runevt(*e[1:])
-        elif code==15:
+        elif self.ecode==15:
             self._stats_runevt(*e)
         super()._event(l)
 
@@ -206,9 +211,11 @@ class AggFieldingSim():
 
     def scorerun(self,flag,*args):
         super().scorerun(flag,*args)
-        er,ter,rbi = (int(x) for x in flag[1:])
-        if er==0: self._stat(self.dt,'UR')
-        if ter==0: self._stat(self.dt,'TUR')
+        ur,tur,rbi,norbi = (int(x) for x in flag[1:])
+        if ur==1:
+            self._stat(self.dt,'UR')
+        if tur==1:
+            self._stat(self.dt,'TUR')
 
     def _event(self,l):
         # ('O','E','K','BB','IBB','HBP','I','S','D','T','HR','WP','PB','DI','OA','RUNEVT','BK','FLE')
@@ -241,8 +248,9 @@ class AggPitchingSim():
     def scorerun(self,flag,*args):
         super().scorerun(flag,*args)
         self._stat(self.dt,'R')
-        er,ter,rbi = (int(x) for x in flag[1:])
-        if er: self._stat(self.dt,'ER')
+        ur,tur,rbi,norbi = (int(x) for x in flag[1:])
+        if ur==0:
+            self._stat(self.dt,'ER')
 
     def outinc(self):
         super().outinc()
@@ -334,22 +342,6 @@ class LeagueFieldingSim(AggFieldingSim,LeagueStatSim):
 
 class LeaguePitchingSim(AggPitchingSim,LeagueStatSim):
     _prefix_ = "League Pitching"
-
-# ------------------------------------------ League No Pitcher ------------------------------------------ #
-
-class NPLeagueBattingSim(AggBattingSim,LeagueStatSim,StatSim,RosterSim):
-    _prefix_ = "League NP"
-
-    def __new__(cls,*args,**kwargs):
-        return object.__new__(cls)
-
-    def _event(self,l):
-        if self._bpid_fpos_ == 0:
-            # If pitcher is batting, don't record stats
-            super(AggBattingSim,self)._event(l)
-        else:
-            super()._event(l)
-
 
 # ------------------------------------------ Season ------------------------------------------ #
 

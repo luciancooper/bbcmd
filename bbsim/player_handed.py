@@ -42,10 +42,10 @@ class HandedRosterStatSim(StatSim,HandedRosterSim):
 #                                 HandedPlayerBattingStatSim                                              #
 ###########################################################################################################
 
-class HandedPlayerBattingStatSim(HandedRosterStatSim):
+class HandedPlayerBattingSim(HandedRosterStatSim):
 
     _prefix_ = "HND-PID"
-    _dcol = ['PA','AB','S','D','T','HR','BB','IBB','HBP','K','I','SH','SF','RBI','GDP']
+    _dcol = ['O','E']+['S','D','T','HR']+['BB','IBB','HBP']+['K','I']+['SH','SF']+['GDP']+['RBI']
 
     # ( 0   1   2    3    4     5    6   7   8   9   10 )
     # ('O','E','K','BB','IBB','HBP','I','S','D','T','HR')
@@ -60,36 +60,30 @@ class HandedPlayerBattingStatSim(HandedRosterStatSim):
     # resp_pitcher: the currently responsible pitcher not used here
     def scorerun(self,flag,runner_pid,runner_ppid,resp_batter,resp_pitcher,bhand,phand):
         super().scorerun(flag,runner_pid,runner_ppid,resp_batter,resp_pitcher)
-        er,ter,rbi = (int(x) for x in flag[1:])
-        if rbi: self._stat(self.t,resp_batter,(bhand,phand),'RBI')
+        ur,tur,rbi,norbi = (int(x) for x in flag[1:])
+        if self._check_rbi_(rbi,norbi):
+            self._stat(self.t,resp_batter,(bhand,phand),'RBI')
 
 
     def _event(self,l):
-        evt,code = l[self.EVENT['evt']],int(l[self.EVENT['code']])
-        e = evt.split('+')
-        bpid,bhand = self.resp_bpid(code),self.resp_bhand(code)
-        ppid,phand = self.resp_ppid(code),self.resp_phand(code)
-        if code<=10:
+        e = l[self.EVENT['evt']].split('+')
+        bpid,bhand = self.resp_bpid,self.resp_bhand
+        ppid,phand = self.resp_ppid,self.resp_phand
+        if self.ecode<=10:
             # (0,1) (2,3,4) (5,6,7,8,9,10)
-            if code<=1:
+            if self.ecode<=1:
                 # O,E
                 ekey = e[-1]
-                if ekey=='SF' or ekey=='SH':
-                    self._stat(self.t,bpid,(bhand,phand),ekey)
-            elif code<=4:
+            elif self.ecode<=4:
                 # K,BB,IBB
                 ekey,e=e[0],e[1:]
-                self._stat(self.t,bpid,(bhand,phand),ekey)
             else:
                 # HBP,I,S,D,T,HR
                 ekey = e[0]
-                self._stat(self.t,bpid,(bhand,phand),ekey)
-            self._stat(self.t,bpid,(bhand,phand),'PA') # Plate Appearance
-            if self.AB[ekey]:
-                self._stat(self.t,bpid,(bhand,phand),'AB')
-
-        if self._advance(l[self.EVENT['badv']],l[self.EVENT['radv']],self._bpid_,ppid,bpid,ppid,bhand,phand):
-            self._cycle_lineup()
+            self._stat(self.t,bpid,(bhand,phand),ekey)
+            if 'GDP' in self.emod:
+                self._stat(self.t,bpid,(bhand,phand),'GDP')
+        self._advance(l[self.EVENT['badv']],l[self.EVENT['radv']],self._bpid_,ppid,bpid,ppid,bhand,phand)
         if self.o==3:
             self._cycle_inning()
 
@@ -99,7 +93,7 @@ class HandedPlayerBattingStatSim(HandedRosterStatSim):
 #                                 HandedPlayerPitchingStatSim                                             #
 ###########################################################################################################
 
-class HandedPlayerPitchingStatSim(HandedRosterStatSim):
+class HandedPlayerPitchingSim(HandedRosterStatSim):
     _prefix_ = "HND-PPID"
     _dcol = ['BF','S','D','T','HR','BB','HBP','IBB','K','BK','WP','PO','GDP']
 
@@ -107,20 +101,18 @@ class HandedPlayerPitchingStatSim(HandedRosterStatSim):
     #------------------------------- [play] -------------------------------#
 
     def _event(self,l):
-        evt,code = l[self.EVENT['evt']],int(l[self.EVENT['code']])
-        e = evt.split('+')
-        bpid,bhand = self.resp_bpid(code),self.resp_bhand(code)
-        ppid,phand = self.resp_ppid(code),self.resp_phand(code)
-
-        if code<=10:
+        e = l[self.EVENT['evt']].split('+')
+        bpid,bhand = self.resp_bpid,self.resp_bhand
+        ppid,phand = self.resp_ppid,self.resp_phand
+        if self.ecode<=10:
             # (0,1) (2,3,4) (5,6,7,8,9,10)
-            if code<=1:
+            if self.ecode<=1:
                 # O,E
                 ekey = e[-1]
                 if ekey=='SF' or ekey=='SH':
                     pass
 
-            elif code<=4:
+            elif self.ecode<=4:
                 # K,BB,IBB
                 ekey,e=e[0],e[1:]
                 self._stat(self.dt,ppid,(phand,bhand),ekey)
@@ -134,17 +126,17 @@ class HandedPlayerPitchingStatSim(HandedRosterStatSim):
             else:
                 # HBP,I,S,D,T,HR
                 ekey = e[0]
-                if ekey!='I': self._stat(self.dt,ppid,(phand,bhand),ekey)
+                if ekey!='I':
+                    self._stat(self.dt,ppid,(phand,bhand),ekey)
             self._stat(self.t^1,ppid,(phand,bhand),'BF')# Batter Faced
-        elif code<=14:
-            if code==11:#WP
+        elif self.ecode<=14:
+            if self.ecode==11:#WP
                 self._stat(self.dt,ppid,(phand,bhand),e[0])
-            elif code==12:#PB
+            elif self.ecode==12:#PB
                 pass
-        elif code==16: #BLK
+        elif self.ecode==16: #BLK
             self._stat(self.dt,ppid,(phand,bhand),e[0])
 
-        if self._advance(l[self.EVENT['badv']],l[self.EVENT['radv']],self._bpid_,ppid,bpid,ppid,bhand,phand):
-            self._cycle_lineup()
+        self._advance(l[self.EVENT['badv']],l[self.EVENT['radv']],self._bpid_,ppid,bpid,ppid,bhand,phand)
         if self.o==3:
             self._cycle_inning()

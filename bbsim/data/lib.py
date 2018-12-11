@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as etree
 from ..index import BBIndex
 from .season import bbseasondata
+import pandas as pd
 
 class bbdatalib():
     def __init__(self,xmlfile,verify,years=None,**kwargs):
@@ -19,6 +20,12 @@ class bbdatalib():
         for s in self.seasons:
             if s.year==x:
                 return s
+
+    @property
+    def parkfactors(self):
+        url = "https://raw.githubusercontent.com/luciancooper/bbsrc/master/files/parkfactors.csv"
+        df = pd.read_csv(url,usecols=['year','team','5yr'],index_col=['year','team'])['5yr'].rename('ParkFactor')
+        return df.loc[[s.year for s in self.seasons]].copy()
 
     @property
     def years(self):

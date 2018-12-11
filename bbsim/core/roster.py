@@ -12,36 +12,26 @@ class RosterSim(GameSim):
         super().__init__(**kwargs)
         # Slots for baserunner info
         self.base = [None]*3
-        # BATTING ORDER
-        self.lpos = [None]*9,[None]*9
         # FIELD POSITIONS
         self.fpos = [None]*10,[None]*10
-        # AT BAT INDEX (increments during sim)
-        self.abinx = [0,0]
         # RPID<RP,RB>
         self.rpid = [None,None]
-        # Batting out of turn - flag indicating if team is the process of batting out of order (very rare)
-        self.bootflg,self.boot=[0,0],[[],[]]
-        self.bootlog = kwargs['bootlog'] if 'bootlog' in kwargs else None
+
 
     # Clears the simulator in preparation for next game
     def _endGame(self):
         super()._endGame()
         self.base[:] = None,None,None
-        self.lpos[0][:],self.lpos[1][:]=[None]*9,[None]*9
         self.fpos[0][:],self.fpos[1][:]=[None]*10,[None]*10
-        self.abinx[:]=0,0
         self.rpid[:]=None,None
-        if self.bootflg[0]:self.bootflg[0],self.boot[0]=0,[]
-        if self.bootflg[1]:self.bootflg[1],self.boot[1]=0,[]
 
     def _lineup(self,l):
         super()._lineup(l)
         self.fpos[0][0]=l[self.LINEUP['asp']]
         self.fpos[1][0]=l[self.LINEUP['hsp']]
-        for x,a,h in zip(range(0,9),l[self.LINEUP['asl']],l[self.LINEUP['hsl']]):
-            self.lpos[0][x],self.lpos[1][x] = int(a[-1]),int(h[-1])
-            self.fpos[0][int(a[-1])],self.fpos[1][int(h[-1])] = a[:8],h[:8]
+        for ax,hx,ap,hp in zip(self.lpos[0],self.lpos[1],l[self.LINEUP['asl']],l[self.LINEUP['hsl']]):
+            self.fpos[0][ax] = ap[:8]
+            self.fpos[1][hx] = hp[:8]
 
     #------------------------------- [Batter & Pitcher] -------------------------------#
 
@@ -53,7 +43,7 @@ class RosterSim(GameSim):
     @property
     def _bpid_(self):
         """batter id"""
-        return self.fpos[self.t][self.lpos[self.t][self._lpos_]]
+        return self.fpos[self.t][self._bpid_fpos_]
 
     #------------------------------- (Resp)[Batter & Pitcher] -------------------------------#
 
@@ -67,27 +57,15 @@ class RosterSim(GameSim):
         """responsible batter id"""
         return self.rpid[1] if (self.rpid[1]!=None) else self._bpid_
 
-    def resp_bpid(self,ecode):
-        if ecode == 2:
-            return self._rbpid_
-        return self._bpid_
+    @property
+    def resp_bpid(self):
+        return self._rbpid_ if self.ecode == 2 else self._bpid_
 
-    def resp_ppid(self,ecode):
-        if ecode == 3 or ecode == 4:
-            return self._rppid_
-        return self._ppid_
+    @property
+    def resp_ppid(self):
+        return self._rppid_ if (self.ecode == 3 or self.ecode == 4) else self._ppid_
 
     #------------------------------- [batting-order] -------------------------------#
-
-    @property
-    def _lpos_(self):
-        """lineup position of batter"""
-        return self.boot[self.t][-1] if self.bootflg[self.t] else self.abinx[self.t]
-
-    @property
-    def _bpid_fpos_(self):
-        """field position of batter"""
-        return self.lpos[self.t][self._lpos_]
 
     @property
     def def_fpos(self):
@@ -99,31 +77,7 @@ class RosterSim(GameSim):
         """current catcher id"""
         return self.fpos[self.dt][1]
 
-    #------------------------------- [batting out of order] -------------------------------#
 
-    def _boot(self,l):
-        """handles the rare case of when a team bats out of order"""
-        super()._boot(l)
-        self.boot[self.t] += [int(l[self.BOOT['lpos']])]
-        if self.bootlog!=None:
-            if not self.bootflg[self.t]&2:self.bootlog.write('\n[%s] %s %s@%s\n'%(self.gameid,self.date,self.awayteam,self.hometeam))
-            self.bootlog.write('boot(%i)[%s]\n'%(self.abinx[self.t],l[self.BOOT['lpos']]))
-        self.bootflg[self.t] = 1
-
-    def _bootcycle(self):
-        """Ensures the correct player is currently batting in the event of a team batting out of order"""
-        i,j = self.abinx[self.t],max(self.boot[self.t])
-        if self.bootlog!=None: self.bootlog.write('bootcycle(%i)[%s] span:[%s]\n'%(self.abinx[self.t],','.join(str(x) for x in self.boot[self.t]),','.join(str(x) for x in range(i,j+1))))
-        self.abinx[self.t] = (self.abinx[self.t]+(j-i+1))%9
-        self.bootflg[self.t],self.boot[self.t] = 0,[]
-
-    def _cycle_lineup(self):
-        """Cycles to the next batter"""
-        if self.bootflg[self.t]:
-            self.bootflg[self.t]<<=1
-        else:
-            self.abinx[self.t] = (self.abinx[self.t]+1)%9
-        self.rpid[:]=None,None
 
     #------------------------------- [Substitution] -------------------------------#
 
@@ -188,8 +142,7 @@ class RosterSim(GameSim):
             else:
                 self.base[int(badv[0])-1]=(bpid,rppid)
                 self.bflg|= 1<<int(badv[0])-1
-            return True
-        return False
+            self._cycle_lineup()
 
 
     #------------------------------- [inning]<END> -------------------------------#
@@ -198,24 +151,17 @@ class RosterSim(GameSim):
         self.base[:] = None,None,None
         return super()._cycle_inning()
 
+    def _cycle_lineup(self):
+        super()._cycle_lineup()
+        self.rpid[:]=None,None
+
     #------------------------------- [event] -------------------------------#
-    def _play(self,l,ctx=None):
-        """ like play, from original files"""
-        if self.bootflg[self.t]&2:self._bootcycle()
-        if ctx!=None:
-            self._verify(l,ctx)
-        self._event(l)
 
     def _event(self,l): #e,adv,bpid
-        code = int(l[self.EVENT['code']])
-        bpid,ppid = self.resp_bpid(code),self.resp_ppid(code)
-        if self._advance(l[self.EVENT['badv']],l[self.EVENT['radv']],self._bpid_,ppid,bpid,ppid):
-            self._cycle_lineup()
+        bpid,ppid = self.resp_bpid,self.resp_ppid
+        self._advance(l[self.EVENT['badv']],l[self.EVENT['radv']],self._bpid_,ppid,bpid,ppid)
         if self.o==3:
             self._cycle_inning()
-
-
-
 
     #------------------------------- [verify] -------------------------------#
 
@@ -231,13 +177,7 @@ class RosterSim(GameSim):
         if self._ppid_!=ctx[self.CTX['ppid']]:
             raise BBSimVerifyError(f"ppid sim[{self._ppid_}] evt[{ctx[self.CTX['ppid']]}]")
         if self._bpid_!=ctx[self.CTX['bpid']]:
-            raise BBSimVerifyError(f"bpid sim[{self._lpos_}|{self._bpid_}] evt[{ctx[self.CTX['lpos']]}|{ctx[self.CTX['bpid']]}] {ctx[self.CTX['eid']]}")
-        if self._lpos_!=int(ctx[self.CTX['lpos']]):
-            raise BBSimVerifyError(f"lpos sim[{self._lpos_}|{self._bpid_}] evt[{ctx[self.CTX['lpos']]}|{ctx[self.CTX['bpid']]}] {ctx[self.CTX['eid']]}")
-
-        fpos = int(ctx[self.CTX['fpos']])
-        if fpos!=0 and fpos!=11 and self._bpid_fpos_!=fpos-1:
-            raise BBSimVerifyError(f"fpos sim[{self._bpid_fpos_}] evt[{fpos-1}] {ctx[self.CTX['eid']]}")
+            raise BBSimVerifyError(f"bpid sim[{self._lpos_}|{self._bpid_}] evt[{ctx[self.CTX['lpos']]}|{ctx[self.CTX['bpid']]}]")
 
     #------------------------------- [str] -------------------------------#
 

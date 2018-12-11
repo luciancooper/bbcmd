@@ -2,6 +2,7 @@ from .core import BBSimError,BBSimSubstitutionError,zipmap
 from .core.stat import StatSim
 from .core.roster import RosterSim
 
+__all__ = ['GAppearanceSim']
 
 class GAppearanceData():
     _pos = ['P','C','1B','2B','3B','SS','LF','CF','RF','DH']

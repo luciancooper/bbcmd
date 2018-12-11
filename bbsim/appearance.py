@@ -1,6 +1,8 @@
 from .core import BBSimError,BBSimSubstitutionError,zipmap
 from .player import RosterStatSim
 
+__all__ = ['AppearanceSim','LahmanAppearanceSim']
+
 ###########################################################################################################
 #                                         AppearanceSim                                                   #
 ###########################################################################################################

@@ -16,9 +16,9 @@ def parse_tag(tag):
 ###########################################################################################################
 
 def fg_playerkeys(years):
-    data = pd.read_csv('https://raw.githubusercontent.com/luciancooper/bbsrc/master/files/scraping/fg_players.csv',usecols=['fgid','position','first_year','last_year']).values
+    data = pd.read_csv('https://raw.githubusercontent.com/luciancooper/bbsrc/master/files/player_ids.csv',usecols=['fangraphs_id','fangraphs_pos','first_year','last_year']).values
     y = set(years)
-    yinx = np.array([(False if y1=='?' else len(y.intersection(set(range(int(y0),int(y1)+1))))>0) for y0,y1 in data[:,[2,3]]],dtype=bool)
+    yinx = np.array([len(y.intersection(set(range(int(y0),int(y1)+1))))>0 for y0,y1 in data[:,[2,3]]],dtype=bool)
     return data[yinx,0:2]
 
 

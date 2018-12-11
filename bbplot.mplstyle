@@ -1,0 +1,77 @@
+
+# fivethirtyeight ['008fd5', 'fc4f30', 'e5ae38', '6d904f', '8b8b8b', '810f7c']
+# seaborn-bright ['003FFF', '03ED3A', 'E8000B', '8A2BE2', 'FFC400', '00D7FF']
+# seaborn-colorblind ['0072B2', '009E73', 'D55E00', 'CC79A7', 'F0E442', '56B4E9']
+# seaborn-dark-palette ['001C7F', '017517', '8C0900', '7600A1', 'B8860B', '006374']
+# seaborn-deep ['4C72B0', '55A868', 'C44E52', '8172B2', 'CCB974', '64B5CD']
+# seaborn-muted ['4878CF', '6ACC65', 'D65F5F', 'B47CC7', 'C4AD66', '77BEDB']
+# seaborn-pastel ['92C6FF', '97F0AA', 'FF9F9A', 'D0BBFF', 'FFFEA3', 'B0E0E6']
+# bmh: ['348ABD', 'A60628', '7A68A6', '467821', 'D55E00', 'CC79A7', '56B4E9', '009E73', 'F0E442', '0072B2']
+
+axes.prop_cycle: cycler('color', ['008fd5', 'fc4f30', 'e5ae38', '6d904f', '8b8b8b', '810f7c'])
+
+figure.facecolor: FFFFFF
+figure.dpi:120
+
+# axis
+axes.facecolor: FFFFFF  #f5f5f5
+axes.edgecolor: 000000
+axes.linewidth: 1
+axes.labelsize: large
+axes.axisbelow: true
+axes.xmargin: 0.05
+axes.ymargin: 0.05
+axes.titlesize: large
+axes.labelpad: 5.0
+
+# Grid
+axes.grid:True
+axes.grid.which:both
+grid.linestyle: -
+grid.linewidth: 1.0
+grid.color: cbcbcb
+grid.alpha: 1
+
+# Ticks
+xtick.major.size: 5
+ytick.major.size: 5
+xtick.minor.size: 2.5
+ytick.minor.size: 2.5
+xtick.minor.visible: True
+ytick.minor.visible: True
+xtick.color: k
+ytick.color: k
+
+
+font.size:12.0
+font.family:monospace
+
+patch.edgecolor: f0f0f0
+patch.linewidth: 0.5
+
+figure.subplot.left: 0.08
+figure.subplot.right: 0.95
+figure.subplot.bottom: 0.07
+#figure.subplot.top:0.9
+#figure.subplot.wspace:0.2
+#figure.subplot.hspace:0.2
+
+
+lines.linewidth: 1
+lines.solid_capstyle: butt
+
+
+# Legends
+
+legend.fancybox: true
+
+
+
+
+svg.fonttype: path
+
+
+
+# Saving Figures
+savefig.facecolor: f5f5f5
+savefig.edgecolor: 3333ff
