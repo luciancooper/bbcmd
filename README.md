@@ -63,7 +63,7 @@ bbsim setup --xml years path
  * `path` - **optional**: the local path in which you wish to create the pointer file in. This is the directory you will be running your simulations in later, so again, remember this location. If not specified, the current working directory will be used. If you want to keep it simple, specify the same path as in the previous command
 
 
-### Step 3. Run a quick test
+### Step 3. Run a test
 
 If the current path does not contain your `bbdata.xml` file, navigate to that path. Run the following command, which will simulate the games for all the seasons specified by `bbdata.xml`, without recording any of the data.  
 ```bash
@@ -86,20 +86,23 @@ bbsim gamescore [-v] [-y YEARS]
 
 ### Generate Aggregated Stats
 
-The `batting`, `fielding`, and `pitching` commands generate aggreated stats. By default, the simulator will group the outputted data by season, unless one of the following optional flags is included:
- * `-l` or `--league` : data is grouped by league (AL and NL).
- * `-t` or `--team` : data is grouped by team
- * `-g` or `--game` : data is grouped by game (like in a box score)
-
+The `batting`, `fielding`, `pitching`, and `rbi` commands generate aggregated stats. By default, the simulator will group the outputted data by season. The following optional flags will change how the data is grouped.
+ * `-l` : by league (AL and NL).
+ * `-t` : by team
+ * `-g` : by game
+ * `-p` : by player (8 character playerid)
+ * `-ph` : by player hand (batting hand or pitching hand)
+ * `-phm` : by player hand matchups
 
 #### `batting` command
+
 The `batting` command generates offensive stats. Columns include:
 > `O,E,S,D,T,HR,BB,IBB,HBP,K,I,SH,SF,GDP,R,RBI,SB,CS,PO`
 
 The `batting` command has an additional optional flag: `-np` or `--nopitcher`. If this is included, the simulator will ignore pitchers when aggregating results.
 
 ```bash
-bbsim batting [-l | -t | -g] [-v] [-np] [-y YEARS]
+bbsim batting [-l | -t | -g | -p | -ph | -phm] [-v] [-np] [-y YEARS]
 ```
 
 #### `fielding` command
@@ -108,7 +111,7 @@ The `fielding` command generates defensive aggregated stats. Columns include:
 > `UR,TUR,P,A,E,PB`
 
 ```bash
-bbsim fielding [-l | -t | -g] [-v] [-y YEARS]
+bbsim fielding [-l | -t | -g | -p] [-v] [-y YEARS]
 ```
 
 #### `pitching` command
@@ -117,52 +120,19 @@ The `pitching` command generates aggregated pitching stats. Columns include:
 > `W,L,SV,IP,BF,R,ER,S,D,T,HR,BB,HBP,IBB,K,BK,WP,PO,GDP`
 
 ```bash
-bbsim pitching [-l | -t | -g] [-v] [-y YEARS]
+bbsim pitching [-l | -t | -g | -p | -ph | -phm] [-v] [-y YEARS]
 ```
 
+#### `rbi` command
 
-### Generate Roster Stats
-
-#### `player` command
-
-Basic Usage:
-The player command generates stats that are grouped by player. Each row of outputted data contains a unique, 8 character `playerid` corresponding to an individual. There are currently 4 runnable subcommands:
-
-```bash
-bbsim player (batting | fielding | pitching | rbi)  > file.csv
-```
-
-
-The `batting` subcommand generates offensive stats. Outputted data columns include:
-> `O,E,S,D,T,HR,BB,IBB,HBP,K,I,SH,SF,GDP,R,RBI,SB,CS,PO`
-
-```bash
-bbsim player batting [-v] [-y YEARS] [--handed] > batting_stats.csv
-```
-
-The `pitching` subcommand generates pitching stats. Outputted data columns include:
-> `W,L,SV,IP,BF,R,ER,S,D,T,HR,BB,HBP,IBB,K,BK,WP,PO,GDP`
-
-```bash
-bbsim player pitching [-v] [-y YEARS] [--handed] > stat_file.csv
-```
-
-Both the `batting` and `pitching` subcommands have an optional `--handed` flag. If this flag is included, then data will be further grouped by batting hand and pitching hand
-
-
-The `fielding` subcommand generates defensive stats. Outputted columns include:
-> `P,A,E,PB`
-
-```bash
-bbsim player fielding [-v] [-y YEARS]
-```
-
-The `rbi` subcommand generates details about each event in which a player recieved an RBI.
+The `rbi` command generates details about each event in which an RBI was credited
 > `RBI,O,E,S,D,T,HR,BB,IBB,HBP,K,I,SF,SH,GDP`
 
 ```bash
-bbsim player rbi [-v] [-y YEARS]
+bbsim rbi [-l | -t | -g | -p | -ph | -phm] [-v] [-y YEARS]
 ```
+
+### Generate Appearance Stats
 
 #### `appearance` command
 
@@ -175,6 +145,8 @@ bbsim appearance [normal | lahman | position | simple] [-v] [-y YEARS]
 
 ### Generate Advanced Stats
 
+Currently two sub commands supported:
+ * woba: simulates the seasonal linear weights used for calculating weighted 
 ```bash
 bbsim advcalc (woba | war) [-v] [-y YEARS]
 ```

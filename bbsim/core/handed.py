@@ -182,7 +182,7 @@ class HandedRosterSim(RosterSim):
     def _event(self,l): #e,adv,bpid
         bpid,ppid = self.resp_bpid,self.resp_ppid
         bhand,phand = self.resp_bhand,self.resp_phand
-        self._advance(l[self.EVENT['badv']],l[self.EVENT['radv']],self._bpid_,ppid,bpid,ppid,bhand,phand)
+        self._advance(l[self.EVENT['badv']],l[self.EVENT['radv']],self._bpid_,ppid,bpid,ppid,bhand,phand) #
         if self.o==3:
             self._cycle_inning()
 

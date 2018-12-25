@@ -306,8 +306,13 @@ class GameSim():
                 self.bflg|=1<<int(badv[0])-1
             self._cycle_lineup()
 
-    def scorerun(self,flag,*args):
+    def scorerun(self,*args):
         self.score[self.t]+=1
+
+    def _scorerun(self):
+        """Shortcut to the basic functionality of scorerun"""
+        self.score[self.t]+=1
+
 
     def _check_rbi_(self,rbi,norbi):
         if rbi == 1 and norbi == 1:

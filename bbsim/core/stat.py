@@ -26,7 +26,7 @@ class StatSim(GameSim):
         i = self._dcol.index(v)
         return i
 
-    def mapCol(self,vals):
+    def icols(self,vals):
         return [self.icol(v) for v in vals]
 
     #------------------------------- [pandas] -------------------------------#
@@ -64,7 +64,7 @@ class StatSim(GameSim):
             return evaluate_mathstring(key,lambda v: self.matrix.cols([self.icol(v)]))
         if type(key) == list:
             if all(type(x)==str for x in key):
-                return self.matrix.cols(self.mapCol(key))
+                return self.matrix.cols(self.icols(key))
             else:
                 return self.matrix.rows(key)
             #Retrieve Columns

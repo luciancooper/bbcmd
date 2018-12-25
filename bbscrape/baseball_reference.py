@@ -31,7 +31,7 @@ def parse_tag(tag):
 
 def parse_pid(th):
     last,first = th.get('csk').split(',')
-    pid = re.search(r'[\w\d]+(?=\.shtml)',th.select_one('a').get('href')).group(0)
+    pid = re.search(r"[\w\d\-.']+(?=\.shtml)",th.select_one('a').get('href')).group(0)
     return [pid,first,last]
 
 

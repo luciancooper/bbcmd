@@ -30,7 +30,7 @@ class RunsPerSim(StatSim):
             self._stat("PA",1)
         super()._event(l)
 
-    
+
     def _endGame(self):
         self._stat('R',self.score[0]+self.score[1])
         self._stat('IP',self.i)
@@ -64,7 +64,7 @@ class RunsPerSim(StatSim):
 
     def _iter_csv(self):
         yield '%s,%s,R/W,R/O,R/PA'%(','.join(str(x) for x in self.index.ids),','.join(self._dcol))
-        r,pa,o,ip = self.mapCol(['R','PA','O','IP'])
+        r,pa,o,ip = self.icols(['R','PA','O','IP'])
         for inx,data in zip(self.index,self.matrix):
             rpw = 9 * (data[r] / (data[ip] / 2)) * 1.5 + 3
             rpo = data[r] / data[o]

@@ -55,8 +55,13 @@ class bbdatalib():
         return BBIndex(('u2','U1','U3','U8'),data,ids=['year','league','team','pid'])
 
     @property
-    def pidHandedIndex(self):
+    def pidHandIndex(self):
         data = [list(x) for x in zip(*(a for b in [s.pidHand for s in self.seasons] for a in b))]
+        return BBIndex(('u2','U1','U3','U8','u1'),data,ids=['year','league','team','pid','bhand'])
+
+    @property
+    def pidHandMatchupIndex(self):
+        data = [list(x) for x in zip(*(a for b in [s.pidHandMatchup for s in self.seasons] for a in b))]
         return BBIndex(('u2','U1','U3','U8','u1','u1'),data,ids=['year','league','team','pid','bhand','phand'])
 
     @property
@@ -69,8 +74,13 @@ class bbdatalib():
         return BBIndex(('u2','U1','U3','U8'),data,ids=['year','league','team','pid'])
 
     @property
-    def ppidHandedIndex(self):
+    def ppidHandIndex(self):
         data = [list(x) for x in zip(*(a for b in [s.ppidHand for s in self.seasons] for a in b))]
+        return BBIndex(('u2','U1','U3','U8','u1'),data,ids=['year','league','team','pid','phand'])
+
+    @property
+    def ppidHandMatchupIndex(self):
+        data = [list(x) for x in zip(*(a for b in [s.ppidHandMatchup for s in self.seasons] for a in b))]
         return BBIndex(('u2','U1','U3','U8','u1','u1'),data,ids=['year','league','team','pid','phand','bhand'])
 
     @property
@@ -90,8 +100,7 @@ class bbdatalib():
     def gidTeamIndex(self):
         data = [list(x) for x in zip(*(a for b in [i for j in [[[(g,0),(g,1)] for g in s.gid] for s in self.seasons] for i in j] for a in b))]
         return BBIndex(('U15','u1'),data,ids=['gid','team'])
-
-
+    
     def run(self,sim,progress=True):
         for gd in self:
             sim.initSeason(gd)

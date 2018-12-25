@@ -1,5 +1,5 @@
 from .core import BBSimError,BBSimSubstitutionError,zipmap
-from .player import RosterStatSim
+from .aggstat import RosterStatSim
 
 __all__ = ['AppearanceSim','LahmanAppearanceSim']
 
@@ -68,7 +68,7 @@ class AppearanceSim(RosterStatSim):
             self.posflag[t]=int('1'*len(pid),2)
             for p in pid:
                 self.g_pid.add(p)
-                self._stats(t,p,('G','GS'))
+                self._stat(t,p,('G','GS'))
             for i in self.lpos[t]:
                 self.cgb_pid[t].add(self.fpos[t][i])
 
@@ -235,7 +235,7 @@ class LahmanAppearanceSim(RosterStatSim):
             for pos,p in zip(self.POS,pid):
                 self.g_pid.add(p)
                 self.pos_pid.add((p,pos))
-                self._stats(t,p,('G','GS',pos))
+                self._stat(t,p,('G','GS',pos))
             for i in self.lpos[t]:
                 self.gb_pid.add(self.fpos[t][i])
                 self._stat(t,self.fpos[t][i],'GB')

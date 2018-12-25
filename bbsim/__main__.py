@@ -52,7 +52,7 @@ def setup(args):
                 with closing(requests.get(url, stream=True)) as r,open(file,'wb') as f:
                     total_size = int(r.headers['content-length'])
                     loops = total_size // 1024 + int(total_size % 1024 > 0)
-                    for chunk in bar.iter(r.iter_content(chunk_size=1024),length=loops,prefix=f'{ftype} {year}'):
+                    for chunk in bar.iter(r.iter_content(chunk_size=1024),length=loops):
                         f.write(chunk)
             except requests.exceptions.RequestException as e:
                 print('Error during requests to {0} : {1}'.format(url, str(e)))
@@ -120,55 +120,30 @@ def gamescore(args,data):
 # ------------------------------------------------ [] ------------------------------------------------ #
 @basic_simulation
 def batting(args,data):
-    from .aggstat import AggBattingSim
-    return AggBattingSim(getattr(data,args.group),nopitcher_flag=args.nopitcher)
+    from .batting import BattingSim
+    return BattingSim(getattr(data,args.group),nopitcher_flag=args.nopitcher)
 
 @basic_simulation
 def pitching(args,data):
-    from .aggstat import AggPitchingSim
-    return AggPitchingSim(getattr(data,args.group))
+    from .pitching import PitchingSim
+    return PitchingSim(getattr(data,args.group))
 
 @basic_simulation
 def fielding(args,data):
-    from .aggstat import AggFieldingSim
-    return AggFieldingSim(getattr(data,args.group))
+    from .fielding import FieldingSim
+    return FieldingSim(getattr(data,args.group))
+
+@basic_simulation
+def rbi(args,data):
+    from .rbi import RBISim
+    return RBISim(getattr(data,args.group))
+
+# ------------------------------------------------ runs per ------------------------------------------------ #
 
 @basic_simulation
 def runsper(args,data):
     from .runsper import RunsPerSim
     return RunsPerSim(data.yearIndex)
-
-# ------------------------------------------------ player ------------------------------------------------ #
-
-@basic_simulation
-def player_batting(args,data):
-    if args.handed == True:
-        from .player_handed import HandedPlayerBattingSim
-        return HandedPlayerBattingSim(data.pidHandedIndex)
-    else:
-        from .player import PlayerBattingSim
-        return PlayerBattingSim(data.pidIndex)
-
-
-@basic_simulation
-def player_fielding(args,data):
-    from .player import PlayerFieldingSim
-    return PlayerFieldingSim(data.pidIndex)
-
-@basic_simulation
-def player_pitching(args,data):
-    if args.handed == True:
-        from .player_handed import HandedPlayerPitchingSim
-        return HandedPlayerPitchingSim(data.ppidHandedIndex)
-    else:
-        from .player import PlayerPitchingSim
-        return PlayerPitchingSim(data.ppidIndex)
-
-@basic_simulation
-def player_rbi(args,data):
-    from .player import PlayerRBISim
-    return PlayerRBISim(data.pidIndex)
-
 
 # ------------------------------------------------ appearance ------------------------------------------------ #
 
@@ -197,8 +172,8 @@ def appearance_simple(args,data):
 
 def advcalc_woba(args):
     from .woba import REMSim,wOBAWeightSim
-    from .aggstat import AggBattingSim
-    from .advcalc import calc_woba
+    from .batting import BattingSim
+    from .advcalc import calc_woba_weights,calc_woba
     data = initializeLib(args.verify,years=args.years)
     yIndex = data.yearIndex
     print("Simulating run expectancy matrix",file=sys.stderr)
@@ -206,16 +181,24 @@ def advcalc_woba(args):
     print("Simulating wOBA linear weights",file=sys.stderr)
     oba = runsim(wOBAWeightSim(yIndex,rem),data)
     print("Simulating season batting stats",file=sys.stderr)
-    mlb = runsim(AggBattingSim(yIndex),data)
+    mlb = runsim(BattingSim(yIndex),data)
     # Calculate wOBA weights
-    df = calc_woba(oba,mlb)
+    lw = calc_woba_weights(oba,mlb)
+    if args.group != None:
+        print("Simulating target batting stats",file=sys.stderr)
+        batting = runsim(BattingSim(getattr(data,args.group)),data)
+        # Calculate wOBA batting
+        df = calc_woba(batting.df(),lw)
+    else:
+        df = lw
     print("wOBA calculation complete",file=sys.stderr)
     df.to_csv(sys.stdout)
 
+
+
 def advcalc_war(args):
     from .woba import REMSim,wOBAWeightSim
-    from .aggstat import AggBattingSim
-    from .player import PlayerBattingSim
+    from .batting import BattingSim
     from .advcalc import calc_war_battingfactor
     data = initializeLib(args.verify,years=args.years)
     yIndex = data.yearIndex
@@ -224,13 +207,13 @@ def advcalc_war(args):
     print("Simulating wOBA linear weights",file=sys.stderr)
     oba = runsim(wOBAWeightSim(yIndex,rem),data)
     print("Simulating season batting stats",file=sys.stderr)
-    mlb = runsim(AggBattingSim(yIndex),data)
+    mlb = runsim(BattingSim(yIndex),data)
     print("Simulating non-pitcher league batting stats",file=sys.stderr)
-    league = runsim(AggBattingSim(data.leagueIndex,nopitcher_flag=True),data)
-    print("Simulating player batting stats",file=sys.stderr)
-    player_batting = runsim(PlayerBattingSim(data.pidIndex),data)
+    league = runsim(BattingSim(data.leagueIndex,nopitcher_flag=True),data)
+    print("Simulating target batting stats",file=sys.stderr)
+    batting = runsim(BattingSim(getattr(data,args.group)),data)
     # Calc batting Factor
-    df = calc_war_battingfactor(oba,mlb,league.df(),data.parkfactors,player_batting.df())
+    df = calc_war_battingfactor(oba,mlb,league.df(),data.parkfactors,batting.df())
     print("WAR batting factor calculation complete",file=sys.stderr)
     df.to_csv(sys.stdout)
 
@@ -275,29 +258,54 @@ def main():
     parser_runsper = subparsers.add_parser('runsper',parents=[verify_parser],help='runs per command help')
     parser_runsper.set_defaults(run=runsper)
 
-    # ----------------------------------------------------------------------------------------------------------- #
-
-    # parent parser for grouping type
-    groupby_parser = argparse.ArgumentParser(add_help=False)
-    groupby_parser_group = groupby_parser.add_mutually_exclusive_group(required=False)
-    groupby_parser_group.add_argument("-l","--league",dest='group',action='store_const',const='leagueIndex')
-    groupby_parser_group.add_argument("-t","--teams",dest='group',action='store_const',const='teamIndex')
-    groupby_parser_group.add_argument("-g","--games",dest='group',action='store_const',const='gidTeamIndex')
-    groupby_parser.set_defaults(group='yearIndex')
-
-
     # ------------------------------------------------ batting ------------------------------------------------ #
-    parser_batting = subparsers.add_parser('batting',parents=[groupby_parser,verify_parser],help='batting command help')
+    parser_batting = subparsers.add_parser('batting',parents=[verify_parser],help='batting command help')
+    parser_batting_group = parser_batting.add_mutually_exclusive_group(required=False)
+    parser_batting_group.add_argument("-l","--league",dest='group',action='store_const',const='leagueIndex',help='group by league')
+    parser_batting_group.add_argument("-t","--teams",dest='group',action='store_const',const='teamIndex',help='group by team')
+    parser_batting_group.add_argument("-g","--games",dest='group',action='store_const',const='gidTeamIndex',help='group by game')
+    parser_batting_group.add_argument("-p","--players",dest='group',action='store_const',const='pidIndex',help='group by player')
+    parser_batting_group.add_argument("-ph",dest='group',action='store_const',const='pidHandIndex',help='group by batter hand')
+    parser_batting_group.add_argument("-phm",dest='group',action='store_const',const='pidHandMatchupIndex',help='group by batter hand matchup with pitcher hand')
+    parser_batting.set_defaults(group='yearIndex')
     parser_batting.add_argument('-np','--nopitcher',action='store_true',help='Flag to exclude pitchers')
     parser_batting.set_defaults(run=batting)
 
     # ------------------------------------------------ fielding ------------------------------------------------ #
-    parser_fielding = subparsers.add_parser('fielding',parents=[groupby_parser,verify_parser],help='fielding command help')
+    parser_fielding = subparsers.add_parser('fielding',parents=[verify_parser],help='fielding command help')
+    parser_fielding_group = parser_fielding.add_mutually_exclusive_group(required=False)
+    parser_fielding_group.add_argument("-l","--league",dest='group',action='store_const',const='leagueIndex',help='group by league')
+    parser_fielding_group.add_argument("-t","--teams",dest='group',action='store_const',const='teamIndex',help='group by team')
+    parser_fielding_group.add_argument("-g","--games",dest='group',action='store_const',const='gidTeamIndex',help='group by game')
+    parser_fielding_group.add_argument("-p","--players",dest='group',action='store_const',const='pidIndex',help='group by player')
+    parser_fielding.set_defaults(group='yearIndex')
     parser_fielding.set_defaults(run=fielding)
 
     # ------------------------------------------------ pitching ------------------------------------------------ #
-    parser_pitching = subparsers.add_parser('pitching',parents=[groupby_parser,verify_parser],help='pitching command help')
+    parser_pitching = subparsers.add_parser('pitching',parents=[verify_parser],help='pitching command help')
+    parser_pitching_group = parser_pitching.add_mutually_exclusive_group(required=False)
+    parser_pitching_group.add_argument("-l","--league",dest='group',action='store_const',const='leagueIndex',help='group by league')
+    parser_pitching_group.add_argument("-t","--teams",dest='group',action='store_const',const='teamIndex',help='group by team')
+    parser_pitching_group.add_argument("-g","--games",dest='group',action='store_const',const='gidTeamIndex',help='group by game')
+    parser_pitching_group.add_argument("-p","--players",dest='group',action='store_const',const='ppidIndex',help='group by player')
+    parser_pitching_group.add_argument("-ph",dest='group',action='store_const',const='ppidHandIndex',help='group by pitcher hand')
+    parser_pitching_group.add_argument("-phm",dest='group',action='store_const',const='ppidHandMatchupIndex',help='group by pitcher hand matchup with batter hand')
+    parser_pitching.set_defaults(group='yearIndex')
     parser_pitching.set_defaults(run=pitching)
+
+
+    # ------------------------------------------------ rbi ------------------------------------------------ #
+    parser_rbi = subparsers.add_parser('rbi',parents=[verify_parser],help='rbi command help')
+    parser_rbi_group = parser_rbi.add_mutually_exclusive_group(required=False)
+    parser_rbi_group.add_argument("-l","--league",dest='group',action='store_const',const='leagueIndex',help='group by league')
+    parser_rbi_group.add_argument("-t","--teams",dest='group',action='store_const',const='teamIndex',help='group by team')
+    parser_rbi_group.add_argument("-g","--games",dest='group',action='store_const',const='gidTeamIndex',help='group by game')
+    parser_rbi_group.add_argument("-p","--players",dest='group',action='store_const',const='pidIndex',help='group by player')
+    parser_rbi_group.add_argument("-ph",dest='group',action='store_const',const='pidHandIndex',help='group by batter hand')
+    parser_rbi_group.add_argument("-phm",dest='group',action='store_const',const='pidHandMatchupIndex',help='group by batter hand matchup with pitcher hand')
+    parser_rbi.set_defaults(group='yearIndex')
+    parser_rbi.set_defaults(run=rbi)
+
 
     # ------------------------------------------------ appearance ------------------------------------------------ #
     parser_appearance = subparsers.add_parser('appearance',help='generate apearance statistics')
@@ -316,30 +324,26 @@ def main():
 
     # ------------------------------------------------ player ------------------------------------------------ #
 
-    parser_player = subparsers.add_parser('player',help='playerstat command help')
-    parser_player_subparsers = parser_player.add_subparsers(title="Available commands",metavar='stat')
-
-    parser_player_batting = parser_player_subparsers.add_parser('batting',parents=[verify_parser],help='calculate batting stats',description="Player Batting Stats Generator")
-    parser_player_batting.add_argument('--handed',action='store_true',help='Handed Simulator')
-    parser_player_batting.set_defaults(run=player_batting)
-
-    parser_player_fielding = parser_player_subparsers.add_parser('fielding',parents=[verify_parser],help='calculate fielding stats',description="Player Fielding Stats Generator")
-    parser_player_fielding.set_defaults(run=player_fielding)
-
-    parser_player_pitching = parser_player_subparsers.add_parser('pitching',parents=[verify_parser],help='calculate pitching stats',description="Player Pitching Stats Generator")
-    parser_player_pitching.add_argument('--handed',action='store_true',help='Handed Simulator')
-    parser_player_pitching.set_defaults(run=player_pitching)
-
-    parser_player_rbi = parser_player_subparsers.add_parser('rbi',parents=[verify_parser],help='calculate with simple method',description="Player RBI Stats Generator")
-    parser_player_rbi.set_defaults(run=player_rbi)
-
     # ------------------------------------------------ advcalc ------------------------------------------------ #
 
     parser_advcalc = subparsers.add_parser('advcalc',help='advcalc command help')
     parser_advcalc_subparsers = parser_advcalc.add_subparsers(title="Available calculations",metavar='calc')
     parser_advcalc_war = parser_advcalc_subparsers.add_parser('war',parents=[verify_parser],help='calculate war',description="WAR Calculation")
+    parser_advcalc_war_group = parser_advcalc_war.add_mutually_exclusive_group(required=False)
+    parser_advcalc_war_group.add_argument("-t","--teams",dest='group',action='store_const',const='teamIndex',help='group by team')
+    parser_advcalc_war_group.add_argument("-ph",dest='group',action='store_const',const='pidHandIndex',help='group by batter hand')
+    parser_advcalc_war_group.add_argument("-phm",dest='group',action='store_const',const='pidHandMatchupIndex',help='group by batter hand matchup with pitcher hand')
+    parser_advcalc_war.set_defaults(group='pidIndex')
     parser_advcalc_war.set_defaults(run=advcalc_war)
+
     parser_advcalc_woba = parser_advcalc_subparsers.add_parser('woba',parents=[verify_parser],help='calculate woba',description="WAR Calculation")
+    parser_advcalc_woba_group = parser_advcalc_woba.add_mutually_exclusive_group(required=False)
+    parser_advcalc_woba_group.add_argument("-l",dest='group',action='store_const',const='leagueIndex',help='group by league')
+    parser_advcalc_woba_group.add_argument("-t",dest='group',action='store_const',const='teamIndex',help='group by team')
+    parser_advcalc_woba_group.add_argument("-g",dest='group',action='store_const',const='gidTeamIndex',help='group by game')
+    parser_advcalc_woba_group.add_argument("-p",dest='group',action='store_const',const='pidIndex',help='group by player')
+    parser_advcalc_woba_group.add_argument("-ph",dest='group',action='store_const',const='pidHandIndex',help='group by batting hand')
+    parser_advcalc_woba_group.add_argument("-phm",dest='group',action='store_const',const='pidHandMatchupIndex',help='group by batting hand matchup with pitching hand')
     parser_advcalc_woba.set_defaults(run=advcalc_woba)
 
     # ------------------------------------------------  ------------------------------------------------ #

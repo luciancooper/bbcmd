@@ -99,9 +99,9 @@ class wOBAWeightSim(StatSim):
     #------------------------------- [df] -------------------------------#
 
     def adjWeights(self):
-        data = self.matrix.subtract_columns(self.mapCol(['O','E','K']))
+        data = self.matrix.subtract_columns(self.icols(['O','E','K']))
         cols = ['BB','HBP','S','D','T','HR']
-        return pd.DataFrame(data[:,self.mapCol(cols)],index=self.index.pandas(),columns=cols)
+        return pd.DataFrame(data[:,self.icols(cols)],index=self.index.pandas(),columns=cols)
 
 
     def lwdf(self):

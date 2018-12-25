@@ -67,9 +67,17 @@ class bbseasondata():
     def pidHand(self,f):
         for l in f:
             lgue,team,pid = l[0],l[2:5],l[6:14]
+            yield (self.year,lgue,team,pid,0)
+            yield (self.year,lgue,team,pid,1)
+
+
+    @filepath('ros')
+    def pidHandMatchup(self,f):
+        for l in f:
+            lgue,team,pid = l[0],l[2:5],l[6:14]
             for i in range(4):
                 yield (self.year,lgue,team,pid,i>>1,i&1)
-
+    
     @filepath('ros')
     def ppid(self,f):
         for l in f:
@@ -78,6 +86,14 @@ class bbseasondata():
 
     @filepath('ros')
     def ppidHand(self,f):
+        for l in f:
+            if l[15] == '0': continue
+            lgue,team,pid = l[0],l[2:5],l[6:14]
+            yield (self.year,lgue,team,pid,0)
+            yield (self.year,lgue,team,pid,1)
+
+    @filepath('ros')
+    def ppidHandMatchup(self,f):
         for l in f:
             if l[15] == '0': continue
             lgue,team,pid = l[0],l[2:5],l[6:14]
